@@ -5,7 +5,7 @@ pro MultiImgABmid
  model=LoadGXmodel('C:\MCloud\CoronalMW\AR-SRH\Data\Models\model20220109.gxm', $
                    55.0, -450.0, 300.0, 300.0, 150, 150)
 
- LoadSRHmid, obsFile, obsImaps, obsSImaps, obsInfo, 3
+ LoadSRHmid, obsFile, obsImaps, obsSImaps, obsInfo, 0
  
  a_arr=[0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75, 4.0]
  b_arr=[1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75, 4.0]
