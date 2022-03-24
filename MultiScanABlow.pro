@@ -5,7 +5,7 @@ pro MultiScanABlow
  model=LoadGXmodel('C:\MCloud\CoronalMW\AR-SRH\Data\Models\model20210603.gxm', $
                    230.0, 210.0, 256.0, 256.0, 128, 128)
 
- LoadSRHlow, obsDir, obsId, obsImaps, obsSImaps, obsInfo, 3
+ LoadSRHlow, obsDir, obsId, obsImaps, obsSImaps, obsInfo, 0
  
  a_arr=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
  b_arr=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
