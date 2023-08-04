@@ -63,7 +63,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;
 ;Results:
 ; As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file
-; with the name starting with 'fit' and including the used metric, threshold, a and b values, and (optionally) 
+; with the name starting with 'fit' and including the used metric, threshold, indicator of the multithermal 
+; approach, a and b values, and (optionally) 
 ; the ObsDateTime string.
 ; These .sav files contain the following fields:
 ;  freqList - array of the emission frequencies, in GHz.
@@ -84,8 +85,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ; it will compute the results only for those (a, b) values that have not been processed before.
 ; 
 ; Also, the program creates in the OutDir directory a .sav file with the name starting with 'Summary' and 
-; including the used metric, threshold, and (optionally) the ObsDateTime string. This .sav file contains
-; the following fields:
+; including the used metric, threshold, indicator of the multithermal approach, and (optionally) the 
+; ObsDateTime string. This .sav file contains the following fields:
 ;  alist, blist - the input alist and blist parameters.
 ;  freqList - array of the emission frequencies, in GHz.
 ;  bestQ - 3D array (N_a*N_b*N_freq, where N_a, N_b, and N_freq are the sizes of the alist, blist, and freqList
@@ -147,7 +148,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   
   print, 'Computing the best fit Q for a=', a, ', b=', b
   
-  fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+ObsDateTime+$
+  fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
+        (iso ? '_I' : '_M')+ObsDateTime+$
         '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav' 
   
   if ~file_exist(fname) then begin
@@ -159,19 +161,22 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  
    if metric eq 'eta' then begin              
     save, a, b, bestQarr, etaArr, etaVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-          freqList, allQ, allEta, modImageConvArr, obsImageArr, filename=fname, /compress
+          freqList, allQ, allEta, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
+          filename=fname, /compress
    endif else if metric eq 'chi' then begin
     chiArr=etaArr
     chiVarArr=etaVarArr
     allChi=allEta       
     save, a, b, bestQarr, chiArr, chiVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-          freqList, allQ, allChi, modImageConvArr, obsImageArr, filename=fname, /compress
+          freqList, allQ, allChi, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
+          filename=fname, /compress
    endif else if metric eq 'rho' then begin
     rhoArr=etaArr
     rhoVarArr=etaVarArr
     allRho=allEta       
     save, a, b, bestQarr, rhoArr, rhoVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-          freqList, allQ, allRho, modImageConvArr, obsImageArr, filename=fname, /compress    
+          freqList, allQ, allRho, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
+          filename=fname, /compress    
    endif       
    
    print, 'The best fit Q for a=', a, ', b=', b, ' computed in ', systime(1)-tstart1, ' s'
@@ -195,8 +200,9 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   a=alist[i]
   b=blist[j]
   
-  fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+ObsDateTime+$
-        '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav'
+  fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
+        (iso ? '_I': '_M')+ObsDateTime+$
+        '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav' 
   o=obj_new('IDL_Savefile', fname)
   o->restore, (metric eq 'eta') ? 'etaArr' : ((metric eq 'chi') ? 'chiArr' : 'rhoArr')
   o->restore, (metric eq 'eta') ? 'etaVarArr' : ((metric eq 'chi') ? 'chiVarArr' : 'rhoVarArr')
@@ -216,18 +222,22 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   endfor
  endfor 
  
- fname1=OutDir+'Summary_'+metric+'_thr'+string(threshold, format='(F5.3)')+ObsDateTime+'.sav'
+ fname1=OutDir+'Summary_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
+        (iso ? '_I': '_M')+ObsDateTime+'.sav'
  
  if metric eq 'eta' then begin
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, eta, etaVar, filename=fname1
+  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, eta, etaVar, modelFileName, EBTELfileName, $
+        filename=fname1
  endif else if metric eq 'chi' then begin
   chi=eta
   chiVar=etaVar
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, filename=fname1
+  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, modelFileName, EBTELfileName, $
+        filename=fname1
  endif else begin
   rho=eta
   rhoVar=etaVar
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, rho, rhoVar, filename=fname1  
+  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, rho, rhoVar, modelFileName, EBTELfileName, $
+        filename=fname1  
  endelse
  
  print, 'Done'
