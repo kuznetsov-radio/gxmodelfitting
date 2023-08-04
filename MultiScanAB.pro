@@ -63,21 +63,47 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;
 ;Results:
 ; As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file
-; with the name including the used metric, threshold, a and b values, and (optionally) the ObsDateTime string.
+; with the name starting with 'fit' and including the used metric, threshold, a and b values, and (optionally) 
+; the ObsDateTime string.
 ; These .sav files contain the following fields:
-; FreqList - array of the emission frequencies, in GHz.
-; BestQarr - array of the obtained best-fit heating rates Q0 at different frequencies.
-; rhoArr / chiArr / etaArr - array of the obtained best (minimum) metrics at different frequencies.
-; modImageArr - (multi-frequency) map object containing the best-fit model radio maps (corresponding to the
-; best-fit heating rates Q0) at different frequencies. The maps are not convolved with the instrument beam.
-; modImageConvArr - (multi-frequency) map object containing the above-mentioned best-fit model radio maps
-; convolved with the instrument beam.
-; obsImageArr - (multi-frequency) map object containing the observed radio maps rebinned and shifted to
-; match the best-fit model maps at the corresponding frequencies.
+;  freqList - array of the emission frequencies, in GHz.
+;  bestQarr - array of the obtained best-fit heating rates Q0 at different frequencies.
+;  rhoArr / chiArr / etaArr - array of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics at 
+;                             different frequencies.
+;  modImageArr - (multi-frequency) map object containing the best-fit model radio maps (corresponding to the
+;                best-fit heating rates Q0) at different frequencies. The maps are not convolved with the 
+;                instrument beam.
+;  modImageConvArr - (multi-frequency) map object containing the above-mentioned best-fit model radio maps
+;                    convolved with the instrument beam.
+;  obsImageArr - (multi-frequency) map object containing the observed radio maps rebinned and shifted to
+;                match the best-fit model maps at the corresponding frequencies.
 ; If the algorithm failed to find the best-fit heating rate at a certain frequency (e.g., the used metric has 
 ; no minimum within the valid Q0 range, or has more than one local minimum), the corresponding BestQarr and
 ; rhoArr / chiArr / etaArr are set to NaN, and the corresponding image maps contain all zeros.
-; Note: the program does not overwrite the existing files.
+; Note: the program does not overwrite the existing fit*.sav files. If the program is interrupted, on the next launch
+; it will compute the results only for those (a, b) values that have not been processed before.
+; 
+; Also, the program creates in the OutDir directory a .sav file with the name starting with 'Summary' and 
+; including the used metric, threshold, and (optionally) the ObsDateTime string. This .sav file contains
+; the following fields:
+;  alist, blist - the input alist and blist parameters.
+;  freqList - array of the emission frequencies, in GHz.
+;  bestQ - 3D array (N_a*N_b*N_freq, where N_a, N_b, and N_freq are the sizes of the alist, blist, and freqList
+;          arrays, respectively) of the obtained best-fit heating rates Q0 at different values of a, b, and frequency.
+;  Iobs, Imod - 3D arrays (N_a*N_b*N_freq) of the total observed and model radio fluxes at different values of
+;               a, b, and frequency. The fluxes correspond to the obtained best-fit Q0 values.
+;  CC - 3D array (N_a*N_b*N_freq) of the correlation coefficients of the observed and model radio maps at 
+;       different values of a, b, and frequency. The coefficients correspond to the obtained best-fit Q0 values.
+;  rho / chi / eta - 3D arrays (N_a*N_b*N_freq) of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics 
+;                    at different values of a, b, and frequency.
+;  rhoVar / chiVar / etaVar - 3D arrays (N_a*N_b*N_freq) of the shifted metrics defined as:
+;                             rhoVar=variance((I_obs-I_mod)/I_obs),
+;                             chiVar=variance((I_obs-I_mod)/sigma),
+;                             etaVar=variance((I_obs-I_mod)/mean(I_obs)).
+;                             The shifted metrics (at different values of a, b, and frequency) correspond to the
+;                             obtained best-fit Q0 values, i.e., to the minima of the non-shifted rho / chi / eta
+;                             metrics. The shifted metrics are not used for finding the best-fit heating rate.
+; If the Summary*.sav file exists, it will be overwritten.
 
  if exist(RefFiles) then ObsFileNames=RefDir+RefFiles else ObsFileNames=file_search(RefDir+'*.sav')
  LoadObservations, ObsFileNames, obsImaps, obsSImaps, obsInfo
@@ -152,4 +178,57 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
    print, 'Total elapsed time: ', systime(1)-tstart0, ' s'
   endif
  endfor
+ 
+ print, 'Creating the summary file'
+ 
+ freqList=obsInfo.freq
+ N_freq=n_elements(freqList)
+ 
+ bestQ=dblarr(N_a, N_b, N_freq)
+ eta=dblarr(N_a, N_b, N_freq)
+ etaVar=dblarr(N_a, N_b, N_freq)
+ Iobs=dblarr(N_a, N_b, N_freq)
+ Imod=dblarr(N_a, N_b, N_freq)
+ CC=dblarr(N_a, N_b, N_freq)    
+ 
+ for i=0, N_a-1 do for j=0, N_b-1 do begin
+  a=alist[i]
+  b=blist[j]
+  
+  fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+ObsDateTime+$
+        '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav'
+  o=obj_new('IDL_Savefile', fname)
+  o->restore, (metric eq 'eta') ? 'etaArr' : ((metric eq 'chi') ? 'chiArr' : 'rhoArr')
+  o->restore, (metric eq 'eta') ? 'etaVarArr' : ((metric eq 'chi') ? 'chiVarArr' : 'rhoVarArr')
+  o->restore, 'bestQarr'
+  o->restore, 'IobsArr'
+  o->restore, 'ImodArr'
+  o->restore, 'CCarr'
+  obj_destroy, o      
+  
+  for k=0, N_freq-1 do begin
+   eta[i, j, k]=(metric eq 'eta') ? etaArr[k] : ((metric eq 'chi') ? chiArr[k] : rhoArr[k]) 
+   etaVar[i, j, k]=(metric eq 'eta') ? etaVarArr[k] : ((metric eq 'chi') ? chiVarArr[k] : rhoVarArr[k])  
+   bestQ[i, j, k]=bestQarr[k]
+   Iobs[i, j, k]=IobsArr[k]
+   Imod[i, j, k]=ImodArr[k]
+   CC[i, j, k]=CCarr[k]
+  endfor
+ endfor 
+ 
+ fname1=OutDir+'Summary_'+metric+'_thr'+string(threshold, format='(F5.3)')+ObsDateTime+'.sav'
+ 
+ if metric eq 'eta' then begin
+  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, eta, etaVar, filename=fname1
+ endif else if metric eq 'chi' then begin
+  chi=eta
+  chiVar=etaVar
+  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, filename=fname1
+ endif else begin
+  rho=eta
+  rhoVar=etaVar
+  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, rho, rhoVar, filename=fname1  
+ endelse
+ 
+ print, 'Done'
 end
