@@ -134,9 +134,11 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  if (metric ne 'eta') && (metric ne 'chi') && (metric ne 'rho') then metric='eta'
  
  if ~exist(MultiThermal) then iso=1 else iso=MultiThermal eq 0
+
+ ObsID=exist(ObsDateTime) ? ObsDateTime : ''
  
  if exist(ObsDateTime) then ObsDateTime='_'+ObsDateTime else ObsDateTime=''
- 
+
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, ObsInfo.freq)       
  
  tstart0=systime(1)
@@ -226,17 +228,17 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
         (iso ? '_I': '_M')+ObsDateTime+'.sav'
  
  if metric eq 'eta' then begin
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, eta, etaVar, modelFileName, EBTELfileName, $
+  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, eta, etaVar, modelFileName, EBTELfileName, ObsID, $
         filename=fname1
  endif else if metric eq 'chi' then begin
   chi=eta
   chiVar=etaVar
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, modelFileName, EBTELfileName, $
+  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, modelFileName, EBTELfileName, ObsID, $
         filename=fname1
  endif else begin
   rho=eta
   rhoVar=etaVar
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, rho, rhoVar, modelFileName, EBTELfileName, $
+  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, rho, rhoVar, modelFileName, EBTELfileName, ObsID, $
         filename=fname1  
  endelse
  
