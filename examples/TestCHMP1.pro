@@ -1,8 +1,8 @@
-pro TestCHMP1
+pro TestCHMP
  RefDir='C:\MCloud\CoronalMW\AR-SRH\Data\SRH\20230226_034000\'
  ModelFileName='C:\MCloud\CoronalMW\AR-SRH\Data\models\model20230226_0340.sav'
  EBTELfileName='C:\MCloud\CoronalMW\AR-SRH\Data\ebtel\ebtelDEM.sav'
- LibFileName='C:\MCloud\CoronalMW\AR-SRH\RenderX\x64\Release\RenderX_64.dll'
+ LibFileName='C:\MCloud\CoronalMW\AR-SRH\RenderX\x64\Release\RenderGRFF_64.dll'
  OutDir='C:\MCloud\CoronalMW\AR-SRH\Data\Images\chmp\'
  alist=[1.00]; [1.00, 1.25]
  blist=[1.25]; [1.25, 1.50]
