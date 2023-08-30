@@ -53,6 +53,7 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
   NQ=n_elements(Qgrid)
   
   for i=0, NQ-1 do if ~fdone[i] then begin
+   print, 'a=', string(a, format='(F0)'), ' b=', string(b, format='(F0)')
    print, 'Array of Q0: ', Qgrid
    print, 'Computing images for the item #', string(i, format='(I0)')  
    
@@ -216,12 +217,18 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
  ;-----------------------------------------------------------------
  
  badf=intarr(Nfreq)
+ 
  for j=0, Nfreq-1 do begin
   u=where(~finite(chi[*, j]), k)
+  
   if k gt 0 then badf[j]=1 else begin
-   nmin=0
-   for i=1, n_elements(Qgrid)-2 do if (chi[i, j] lt chi[i-1, j]) && (chi[i, j] lt chi[i+1, j]) then nmin+=1
-   if nmin ne 1 then badf[j]=1
+   chi_min=min(chi[*, j], k)
+   
+   if (k eq 0) || (k eq (n_elements(Qgrid)-1)) then badf[j]=1 else begin
+    nmin=0
+    for i=1, n_elements(Qgrid)-2 do if (chi[i, j] lt chi[i-1, j]) && (chi[i, j] lt chi[i+1, j]) then nmin+=1
+    if nmin ne 1 then badf[j]=1
+   endelse 
   endelse
  endfor
  
@@ -273,7 +280,8 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
      st=' (Brent step)'
     endelse           
                               
-    print, string(freqlist[j], format='(F0)'), ' GHz, minimization step #', string(step, format='(I0)')
+    print, 'a=', string(a, format='(F0)'), ' b=', string(b, format='(F0)'), $
+           ' ', string(freqlist[j], format='(F0)'), ' GHz, minimization step #', string(step, format='(I0)')
     print, 'Bracketed range: ', Qa, Qb, Qc, ' (', (Qc-Qa)/(Qc+Qa)*100, '%)'
     print, 'Image metrics:   ', chi_a, chi_b, chi_c
     print, 'Computing images for Q0=', Qx, st
