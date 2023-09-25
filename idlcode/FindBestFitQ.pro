@@ -81,8 +81,8 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
     modX->setmap, j, modI
     
     FindShift, _obsI, modI, dx, dy
-    ExtractSubmap, _obsI, modI, dx, dy, 'SRH I', obsI
-    ExtractSubmap, _obsSigma, modI, dx, dy, 'SRH I sigma', obsSigma
+    ExtractSubmap, _obsI, modI, dx, dy, _obsI.id, obsI
+    ExtractSubmap, _obsSigma, modI, dx, dy, _obsI.id+' sigma', obsSigma
     obsX->setmap, j, obsI
     
     obsMax=GetSmoothedMax(obsI, obsInfo.sx[j], obsInfo.sy[j])
@@ -314,8 +314,8 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
      modX->setmap, k, modI
     
      FindShift, _obsI, modI, dx, dy
-     ExtractSubmap, _obsI, modI, dx, dy, 'SRH I', obsI
-     ExtractSubmap, _obsSigma, modI, dx, dy, 'SRH I sigma', obsSigma
+     ExtractSubmap, _obsI, modI, dx, dy, _obsI.id, obsI
+     ExtractSubmap, _obsSigma, modI, dx, dy, _obsI.id+' sigma', obsSigma
      obsX->setmap, k, obsI
     
      obsMax=GetSmoothedMax(obsI, obsInfo.sx[k], obsInfo.sy[k])
@@ -414,7 +414,7 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
   modImageConvArr->setmap, j, m
   
   _obsI=obsImaps.getmap(j)
-  ExtractSubmap, _obsI, m, 0, 0, 'SRH I', obsI
+  ExtractSubmap, _obsI, m, 0, 0, _obsI.id, obsI
   obsImageArr->setmap, j, obsI
  endelse
  
