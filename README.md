@@ -9,16 +9,11 @@ b) SearchForLocalMinimumAB.pro: it searches for the parameters of the coronal he
 Here, we repeat the headers of the above-mentioned routines with the descriptions of the parameters:
 
 pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, alist, blist, xc, yc, dx, dy, Nx, Ny, RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime<br/>
-;This program searches for the heating rate value Q0 that provides the best agreement between the model and observed radio maps, for the specified parameters a and b of the coronal heating model.
-
-;Input parameters:
-; RefDir - the directory where the observed radio maps are stored.
-; If the parameter RefFiles is omitted, the program loads all *.sav files in the RefDir directory.
-; Otherwise, the program loads the file(s) specified by RefDir+RefFiles.
-; Each .sav file should contain a 'ref' map object with three maps:
-; I_obs=ref.getmap(0) - the observed radio map,
-; sigma=ref.getmap(1) - the corresponding instrumental noise (with the same dimensions as I_obs),
-; beam =ref.getmap(2) - the instrument beam (point-spread function).
+Input parameters:<br/>
+RefDir - the directory where the observed radio maps are stored. If the parameter RefFiles is omitted, the program loads all *.sav files in the RefDir directory. Otherwise, the program loads the file(s) specified by RefDir+RefFiles. Each .sav file should contain a 'ref' map object with three maps:<br/>
+I_obs=ref.getmap(0) - the observed radio map,<br/>
+sigma=ref.getmap(1) - the corresponding instrumental noise (with the same dimensions as I_obs),<br/>
+beam =ref.getmap(2) - the instrument beam (point-spread function).<br/>
 ;
 ; ModelFileName - name of the .sav file that contains the GX Simulator model.
 ;
