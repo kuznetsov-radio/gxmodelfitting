@@ -325,21 +325,22 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ; Default: ''
 ;
 ;Results:
-; As the result, the program creates in the OutDir directory a .sav file with the name starting with 'Summary' and 
+; The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency
+; is considered. The program creates in the OutDir directory a .sav file with the name starting with 'Summary' and 
 ; including the used metric, threshold, indicator of the multithermal approach, and (optionally) the 
 ; ObsDateTime and ObsFreq strings. This .sav file contains the following fields:
 ;  alist, blist - arrays of a and b parameters covering the range searched by the program during the metric 
 ;                 minimization process, with da and db steps.
-;  freqList - the emission frequency, in GHz.
-;  bestQ - 2D array (N_a*N_b, where N_a and N_b are the sizes of the alist and blist arrays, respectively) of the 
+;  freqList - 1-element array containing the emission frequency, in GHz.
+;  bestQ - 3D array (N_a*N_b*1, where N_a and N_b are the sizes of the alist and blist arrays, respectively) of the 
 ;          obtained best-fit heating rates Q0 at different values of a and b.
-;  Iobs, Imod - 2D arrays (N_a*N_b) of the total observed and model radio fluxes at different values of a and b. 
+;  Iobs, Imod - 3D arrays (N_a*N_b*1) of the total observed and model radio fluxes at different values of a and b. 
 ;               The fluxes correspond to the obtained best-fit Q0 values.
-;  CC - 2D array (N_a*N_b) of the correlation coefficients of the observed and model radio maps at different 
+;  CC - 3D array (N_a*N_b*1) of the correlation coefficients of the observed and model radio maps at different 
 ;       values of a and b. The coefficients correspond to the obtained best-fit Q0 values.
-;  rho / chi / eta - 2D arrays (N_a*N_b) of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics 
+;  rho / chi / eta - 3D arrays (N_a*N_b*1) of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics 
 ;                    at different values of a and b.
-;  rhoVar / chiVar / etaVar - 2D arrays (N_a*N_b) of the shifted metrics defined as:
+;  rhoVar / chiVar / etaVar - 3D arrays (N_a*N_b*1) of the shifted metrics defined as:
 ;                             rhoVar=variance((I_obs-I_mod)/I_obs),
 ;                             chiVar=variance((I_obs-I_mod)/sigma),
 ;                             etaVar=variance((I_obs-I_mod)/mean(I_obs)).
@@ -359,13 +360,14 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ; file with the name starting with 'fit' and including the used metric, threshold, indicator of the multithermal 
 ; approach, a and b values, and (optionally) the ObsDateTime and ObsFreq strings.
 ; These .sav files contain the following fields:
-;  freqList - the emission frequency, in GHz.
-;  bestQarr - the obtained best-fit heating rate Q0.
-;  rhoArr / chiArr / etaArr - the obtained best (minimum) rho^2 / chi^2 / eta^2 metric.
-;  modImageArr - the best-fit model radio map (corresponding to the best-fit heating rate Q0). 
+;  freqList - 1-element array containing the emission frequency, in GHz.
+;  bestQarr - 1-element array containing the obtained best-fit heating rate Q0.
+;  rhoArr / chiArr / etaArr - 1-element array containing the obtained best (minimum) rho^2 / chi^2 / eta^2 metric.
+;  modImageArr - map object containing the best-fit model radio map (corresponding to the best-fit heating rate Q0). 
 ;                The map is not convolved with the instrument beam.
-;  modImageConvArr - the above-mentioned best-fit model radio map convolved with the instrument beam.
-;  obsImageArr - the observed radio map rebinned and shifted to match the best-fit model map.
+;  modImageConvArr - map object containingthe above-mentioned best-fit model radio map convolved with the 
+;                    instrument beam.
+;  obsImageArr - map object containing the observed radio map rebinned and shifted to match the best-fit model map.
 ; If the algorithm failed to find the best-fit heating rate (e.g., the used metric has no minimum within the 
 ; valid Q0 range, or has more than one local minimum), the corresponding BestQarr and rhoArr / chiArr / etaArr are 
 ; set to NaN, and the corresponding image maps contain all zeros.

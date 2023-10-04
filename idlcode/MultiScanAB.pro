@@ -10,9 +10,12 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ; If the parameter RefFiles is omitted, the program loads all *.sav files in the RefDir directory.
 ; Otherwise, the program loads the file(s) specified by RefDir+RefFiles.
 ; Each .sav file should contain a 'ref' map object with three maps:
-; I_obs=ref.getmap(0) - the observed radio map,
+; I_obs=ref.getmap(0) - the observed radio map, with the tags I_obs.freq specifying the emission frequency in GHz,
+;                       and I_obs.id specifying the map title,
 ; sigma=ref.getmap(1) - the corresponding instrumental noise (with the same dimensions as I_obs),
-; beam =ref.getmap(2) - the instrument beam (point-spread function).
+; beam =ref.getmap(2) - the instrument beam (point-spread function), with the tags beam.a_beam and beam.b_beam
+;                       specifying the beam half-widths at 1/e level in two ortogonal directions, in arcseconds.
+; Other required tags of these maps are standard for the SSW map structure.
 ;
 ; ModelFileName - name of the .sav file that contains the GX Simulator model.
 ;
