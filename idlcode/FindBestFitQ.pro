@@ -82,6 +82,9 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
     
     FindShift, _obsI, modI, dx, dy
     ExtractSubmap, _obsI, modI, dx, dy, _obsI.id, obsI
+    obsI=create_struct('shiftX', dx, $
+                       'shiftY', dy, $
+                       obsI)
     ExtractSubmap, _obsSigma, modI, dx, dy, _obsI.id+' sigma', obsSigma
     obsX->setmap, j, obsI
     
@@ -315,6 +318,9 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
     
      FindShift, _obsI, modI, dx, dy
      ExtractSubmap, _obsI, modI, dx, dy, _obsI.id, obsI
+     obsI=create_struct('shiftX', dx, $
+                        'shiftY', dy, $
+                        obsI)
      ExtractSubmap, _obsSigma, modI, dx, dy, _obsI.id+' sigma', obsSigma
      obsX->setmap, k, obsI
     

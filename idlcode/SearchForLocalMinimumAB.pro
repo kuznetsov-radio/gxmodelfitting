@@ -500,6 +500,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  Iobs=dblarr(N_a, N_b, N_freq)
  Imod=dblarr(N_a, N_b, N_freq)
  CC=dblarr(N_a, N_b, N_freq)    
+ shiftX=dblarr(N_a, N_b, N_freq)
+ shiftY=dblarr(N_a, N_b, N_freq)
  
  bestQ[*]=-1
  eta[*]=-1
@@ -507,6 +509,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  Iobs[*]=-1
  Imod[*]=-1
  CC[*]=-1
+ shiftX[*]=!values.d_NaN
+ shiftY[*]=!values.d_NaN
  
  for i=0, N_a-1 do for j=0, N_b-1 do begin
   a=a_arr1D[i]
@@ -532,6 +536,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
     o->restore, 'IobsArr'
     o->restore, 'ImodArr'
     o->restore, 'CCarr'
+    o->restore, 'obsImageArr'
     obj_destroy, o      
   
     for k=0, N_freq-1 do begin
@@ -541,6 +546,10 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
      Iobs[i, j, k]=IobsArr[k]
      Imod[i, j, k]=ImodArr[k]
      CC[i, j, k]=CCarr[k]
+     
+     m=obsimagearr.getmap(k)
+     if tag_exist(m, 'shiftX') then shiftX[i, j, k]=m.shiftX
+     if tag_exist(m, 'shiftY') then shiftY[i, j, k]=m.shiftY
     endfor
    endif
   endelse  
@@ -551,17 +560,17 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  
  if metric eq 'eta' then begin
   save, alist, blist, freqList, bestQ, Iobs, Imod, CC, eta, etaVar, modelFileName, EBTELfileName, ObsID, $
-        filename=fname1
+        shiftX, shiftY, filename=fname1
  endif else if metric eq 'chi' then begin
   chi=eta
   chiVar=etaVar
   save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, modelFileName, EBTELfileName, ObsID, $
-        filename=fname1
+        shiftX, shiftY, filename=fname1
  endif else begin
   rho=eta
   rhoVar=etaVar
   save, alist, blist, freqList, bestQ, Iobs, Imod, CC, rho, rhoVar, modelFileName, EBTELfileName, ObsID, $
-        filename=fname1  
+        shiftX, shiftY, filename=fname1  
  endelse
  
  print, 'Done'
