@@ -338,6 +338,9 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ;               The fluxes correspond to the obtained best-fit Q0 values.
 ;  CC - 3D array (N_a*N_b*1) of the correlation coefficients of the observed and model radio maps at different 
 ;       values of a and b. The coefficients correspond to the obtained best-fit Q0 values.
+;  shiftX, shiftY - 3D arrays (N_a*N_b*1) of the shifts (in arcseconds) applied to the observed radio maps
+;                   to obtain the best correlation with the model maps, at different values of a, b, and frequency.
+;                   The shifts correspond to the obtained best-fit Q0 values.
 ;  rho / chi / eta - 3D arrays (N_a*N_b*1) of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics 
 ;                    at different values of a and b.
 ;  rhoVar / chiVar / etaVar - 3D arrays (N_a*N_b*1) of the shifted metrics defined as:
@@ -349,7 +352,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ;                             metrics. The shifted metrics are not used for finding the best-fit heating rate.
 ; Note, that if the algorithm has failed to find the best-fit heating rate Q0 at a certain combination of a and b 
 ; (e.g., the used metric has no minimum within the valid Q0 range, or has more than one local minimum), the 
-; corresponding bestQ, Imod, CC, rho / chi / eta, and rhoVar / chiVar / etaVar are set to NaN.
+; corresponding bestQ, Imod, CC, rho / chi / eta, shiftX, shiftY, and rhoVar / chiVar / etaVar are set to NaN.
 ; If the data for a certain combination of a and b are missing (because the search for the best-fit Q0 is performed 
 ; only within a subset of the rectangular area determined by the regular grids alist and blist), the 
 ; corresponding bestQ, Imod, CC, rho / chi / eta, and rhoVar / chiVar / etaVar are set to -1. Therefore, when 

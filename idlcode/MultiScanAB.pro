@@ -98,6 +98,9 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;               a, b, and frequency. The fluxes correspond to the obtained best-fit Q0 values.
 ;  CC - 3D array (N_a*N_b*N_freq) of the correlation coefficients of the observed and model radio maps at 
 ;       different values of a, b, and frequency. The coefficients correspond to the obtained best-fit Q0 values.
+;  shiftX, shiftY - 3D arrays (N_a*N_b*N_freq) of the shifts (in arcseconds) applied to the observed radio maps
+;                   to obtain the best correlation with the model maps, at different values of a, b, and frequency.
+;                   The shifts correspond to the obtained best-fit Q0 values.
 ;  rho / chi / eta - 3D arrays (N_a*N_b*N_freq) of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics 
 ;                    at different values of a, b, and frequency.
 ;  rhoVar / chiVar / etaVar - 3D arrays (N_a*N_b*N_freq) of the shifted metrics defined as:
@@ -200,6 +203,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  Iobs=dblarr(N_a, N_b, N_freq)
  Imod=dblarr(N_a, N_b, N_freq)
  CC=dblarr(N_a, N_b, N_freq)    
+ shiftX=dblarr(N_a, N_b, N_freq)
+ shiftY=dblarr(N_a, N_b, N_freq)
  
  for i=0, N_a-1 do for j=0, N_b-1 do begin
   a=alist[i]
@@ -224,6 +229,10 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
    Iobs[i, j, k]=IobsArr[k]
    Imod[i, j, k]=ImodArr[k]
    CC[i, j, k]=CCarr[k]
+   
+   m=obsimagearr.getmap(k)
+   if tag_exist(m, 'shiftX') then shiftX[i, j, k]=m.shiftX
+   if tag_exist(m, 'shiftY') then shiftY[i, j, k]=m.shiftY
   endfor
  endfor 
  
@@ -232,17 +241,17 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  
  if metric eq 'eta' then begin
   save, alist, blist, freqList, bestQ, Iobs, Imod, CC, eta, etaVar, modelFileName, EBTELfileName, ObsID, $
-        filename=fname1
+        shiftX, shiftY, filename=fname1
  endif else if metric eq 'chi' then begin
   chi=eta
   chiVar=etaVar
   save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, modelFileName, EBTELfileName, ObsID, $
-        filename=fname1
+        shiftX, shiftY, filename=fname1
  endif else begin
   rho=eta
   rhoVar=etaVar
   save, alist, blist, freqList, bestQ, Iobs, Imod, CC, rho, rhoVar, modelFileName, EBTELfileName, ObsID, $
-        filename=fname1  
+        shiftX, shiftY, filename=fname1  
  endelse
  
  print, 'Done'
