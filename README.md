@@ -54,6 +54,7 @@ freqList - array of the emission frequencies, in GHz.<br/>
 bestQ - 3D array (N_a\*N_b\*N_freq, where N_a, N_b, and N_freq are the sizes of the alist, blist, and freqList arrays, respectively) of the obtained best-fit heating rates Q0 at different values of a, b, and frequency.<br/>
 Iobs, Imod - 3D arrays (N_a\*N_b\*N_freq) of the total observed and model radio fluxes at different values of a, b, and frequency. The fluxes correspond to the obtained best-fit Q0 values.<br/>
 CC - 3D array (N_a\*N_b\*N_freq) of the correlation coefficients of the observed and model radio maps at different values of a, b, and frequency. The coefficients correspond to the obtained best-fit Q0 values.<br/>
+shiftX, shiftY - 3D arrays (N_a\*N_b\*N_freq) of the shifts (in arcseconds) applied to the observed radio maps to obtain the best correlation with the model maps, at different values of a, b, and frequency. The shifts correspond to the obtained best-fit Q0 values.<br/>
 rho / chi / eta - 3D arrays (N_a\*N_b\*N_freq) of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics at different values of a, b, and frequency.<br/>
 rhoVar / chiVar / etaVar - 3D arrays (N_a\*N_b\*N_freq) of the shifted metrics defined as:<br/>
 rhoVar=variance((I_obs-I_mod)/I_obs),<br/>
@@ -105,6 +106,7 @@ freqList - 1-element array containing the emission frequency, in GHz.<br/>
 bestQ - 3D array (N_a\*N_b\*1, where N_a and N_b are the sizes of the alist and blist arrays, respectively) of the obtained best-fit heating rates Q0 at different values of a and b.<br/>
 Iobs, Imod - 3D arrays (N_a\*N_b\*1) of the total observed and model radio fluxes at different values of a and b. The fluxes correspond to the obtained best-fit Q0 values.<br/>
 CC - 3D array (N_a\*N_b\*1) of the correlation coefficients of the observed and model radio maps at different values of a and b. The coefficients correspond to the obtained best-fit Q0 values.<br/>
+shiftX, shiftY - 3D arrays (N_a\*N_b\*1) of the shifts (in arcseconds) applied to the observed radio maps to obtain the best correlation with the model maps, at different values of a, b, and frequency. The shifts correspond to the obtained best-fit Q0 values.<br/>
 rho / chi / eta - 3D arrays (N_a\*N_b\*1) of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics at different values of a and b.<br/>
 rhoVar / chiVar / etaVar - 3D arrays (N_a\*N_b\*1) of the shifted metrics defined as:<br/>
 rhoVar=variance((I_obs-I_mod)/I_obs),<br/>
