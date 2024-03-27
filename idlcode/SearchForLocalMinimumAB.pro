@@ -1,228 +1,214 @@
-pro FindMinMetricLocation, eta_arr, k 
- eta_arrX=eta_arr
- u=where(finite(eta_arrX) and (eta_arrX lt 0), k)
- if k gt 0 then eta_arrX[u]=!values.d_NaN
- etaMin=min(eta_arrX, k, /NaN)
+pro FindMinMetricLocation, mtr_arr, k 
+ mtr_arrX=mtr_arr
+ u=where(finite(mtr_arrX) and (mtr_arrX lt 0), k)
+ if k gt 0 then mtr_arrX[u]=!values.d_NaN
+ mtrMin=min(mtr_arrX, k, /NaN)
 end  
 
-pro ExpandArrays1, eta_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db
- FindMinMetricLocation, eta_arr, k
+pro ExpandArrays1, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db
+ FindMinMetricLocation, mtr_arr, k
  if a_arr[k] eq min(a_arr) then begin
   N_a+=1
   a_arr1D=[a_arr1D[0]-da, a_arr1D]
   a_arrX=dblarr(N_a, N_b)
   b_arrX=dblarr(N_a, N_b)
-  eta_arrX=dblarr(N_a, N_b)
+  mtr_arrX=dblarr(N_a, N_b)
   Q0_arrX=dblarr(N_a, N_b)
   for j=0, N_b-1 do begin
    a_arrX[*, j]=a_arr1D
    b_arrX[*, j]=b_arr1D[j]
-   eta_arrX[*, j]=[-1d0, reform(eta_arr[*, j])]
+   mtr_arrX[*, j]=[-1d0, reform(mtr_arr[*, j])]
    Q0_arrX[*, j]=[-1d0, reform(Q0_arr[*, j])]
   endfor
   a_arr=a_arrX
   b_arr=b_arrX
-  eta_arr=eta_arrX
+  mtr_arr=mtr_arrX
   Q0_arr=Q0_arrX
  endif 
   
- FindMinMetricLocation, eta_arr, k
+ FindMinMetricLocation, mtr_arr, k
  if a_arr[k] eq max(a_arr) then begin
   N_a+=1
   a_arr1D=[a_arr1D, a_arr1D[N_a-2]+da]
   a_arrX=dblarr(N_a, N_b)
   b_arrX=dblarr(N_a, N_b)
-  eta_arrX=dblarr(N_a, N_b)
+  mtr_arrX=dblarr(N_a, N_b)
   Q0_arrX=dblarr(N_a, N_b)
   for j=0, N_b-1 do begin
    a_arrX[*, j]=a_arr1D
    b_arrX[*, j]=b_arr1D[j]
-   eta_arrX[*, j]=[reform(eta_arr[*, j]), -1d0]
+   mtr_arrX[*, j]=[reform(mtr_arr[*, j]), -1d0]
    Q0_arrX[*, j]=[reform(Q0_arr[*, j]), -1d0]
   endfor
   a_arr=a_arrX
   b_arr=b_arrX
-  eta_arr=eta_arrX
+  mtr_arr=mtr_arrX
   Q0_arr=Q0_arrX
  endif   
   
- FindMinMetricLocation, eta_arr, k
+ FindMinMetricLocation, mtr_arr, k
  if b_arr[k] eq min(b_arr) then begin
   N_b+=1
   b_arr1D=[b_arr1D[0]-db, b_arr1D]
   a_arrX=dblarr(N_a, N_b)
   b_arrX=dblarr(N_a, N_b)
-  eta_arrX=dblarr(N_a, N_b)
+  mtr_arrX=dblarr(N_a, N_b)
   Q0_arrX=dblarr(N_a, N_b)
   for i=0, N_a-1 do begin
    a_arrX[i, *]=a_arr1D[i]
    b_arrX[i, *]=b_arr1D
-   eta_arrX[i, *]=[-1d0, reform(eta_arr[i, *])]
+   mtr_arrX[i, *]=[-1d0, reform(mtr_arr[i, *])]
    Q0_arrX[i, *]=[-1d0, reform(Q0_arr[i, *])]
   endfor
   a_arr=a_arrX
   b_arr=b_arrX
-  eta_arr=eta_arrX
+  mtr_arr=mtr_arrX
   Q0_arr=Q0_arrX
  endif 
   
- FindMinMetricLocation, eta_arr, k
+ FindMinMetricLocation, mtr_arr, k
  if b_arr[k] eq max(b_arr) then begin
   N_b+=1
   b_arr1D=[b_arr1D, b_arr1D[N_b-2]+db]
   a_arrX=dblarr(N_a, N_b)
   b_arrX=dblarr(N_a, N_b)
-  eta_arrX=dblarr(N_a, N_b)
+  mtr_arrX=dblarr(N_a, N_b)
   Q0_arrX=dblarr(N_a, N_b)
   for i=0, N_a-1 do begin
    a_arrX[i, *]=a_arr1D[i]
    b_arrX[i, *]=b_arr1D
-   eta_arrX[i, *]=[reform(eta_arr[i, *]), -1d0]
+   mtr_arrX[i, *]=[reform(mtr_arr[i, *]), -1d0]
    Q0_arrX[i, *]=[reform(Q0_arr[i, *]), -1d0]
   endfor
   a_arr=a_arrX
   b_arr=b_arrX
-  eta_arr=eta_arrX
+  mtr_arr=mtr_arrX
   Q0_arr=Q0_arrX
  endif   
  
  u=where((abs(a_arr) ge 10.0) or (abs(b_arr) ge 10.0), k)
  if k gt 0 then begin
-  eta_arr[u]=!values.d_NaN
+  mtr_arr[u]=!values.d_NaN
   Q0_arr[u]=!values.d_NaN
  endif
 end
 
-pro ExpandArrays2, eta_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric
- FindMinMetricLocation, eta_arr, k
- eta_min=eta_arr[k]
- u=where(finite(eta_arr) and (eta_arr gt 0) and (eta_arr lt (eta_min*threshold_metric)))
+pro ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric
+ FindMinMetricLocation, mtr_arr, k
+ mtr_min=mtr_arr[k]
+ u=where(finite(mtr_arr) and (mtr_arr gt 0) and (mtr_arr lt (mtr_min*threshold_metric)))
  
  if min(a_arr[u]) eq min(a_arr) then begin
   N_a+=1
   a_arr1D=[a_arr1D[0]-da, a_arr1D]
   a_arrX=dblarr(N_a, N_b)
   b_arrX=dblarr(N_a, N_b)
-  eta_arrX=dblarr(N_a, N_b)
+  mtr_arrX=dblarr(N_a, N_b)
   Q0_arrX=dblarr(N_a, N_b)
   for j=0, N_b-1 do begin
    a_arrX[*, j]=a_arr1D
    b_arrX[*, j]=b_arr1D[j]
-   eta_arrX[*, j]=[-1d0, reform(eta_arr[*, j])]
+   mtr_arrX[*, j]=[-1d0, reform(mtr_arr[*, j])]
    Q0_arrX[*, j]=[-1d0, reform(Q0_arr[*, j])]
   endfor
   a_arr=a_arrX
   b_arr=b_arrX
-  eta_arr=eta_arrX
+  mtr_arr=mtr_arrX
   Q0_arr=Q0_arrX
  endif 
   
- FindMinMetricLocation, eta_arr, k
- eta_min=eta_arr[k]
- u=where(finite(eta_arr) and (eta_arr gt 0) and (eta_arr lt (eta_min*threshold_metric)))
+ FindMinMetricLocation, mtr_arr, k
+ mtr_min=mtr_arr[k]
+ u=where(finite(mtr_arr) and (mtr_arr gt 0) and (mtr_arr lt (mtr_min*threshold_metric)))
 
  if max(a_arr[u]) eq max(a_arr) then begin
   N_a+=1
   a_arr1D=[a_arr1D, a_arr1D[N_a-2]+da]
   a_arrX=dblarr(N_a, N_b)
   b_arrX=dblarr(N_a, N_b)
-  eta_arrX=dblarr(N_a, N_b)
+  mtr_arrX=dblarr(N_a, N_b)
   Q0_arrX=dblarr(N_a, N_b)
   for j=0, N_b-1 do begin
    a_arrX[*, j]=a_arr1D
    b_arrX[*, j]=b_arr1D[j]
-   eta_arrX[*, j]=[reform(eta_arr[*, j]), -1d0]
+   mtr_arrX[*, j]=[reform(mtr_arr[*, j]), -1d0]
    Q0_arrX[*, j]=[reform(Q0_arr[*, j]), -1d0]
   endfor
   a_arr=a_arrX
   b_arr=b_arrX
-  eta_arr=eta_arrX
+  mtr_arr=mtr_arrX
   Q0_arr=Q0_arrX
  endif   
   
- FindMinMetricLocation, eta_arr, k
- eta_min=eta_arr[k]
- u=where(finite(eta_arr) and (eta_arr gt 0) and (eta_arr lt (eta_min*threshold_metric)))
+ FindMinMetricLocation, mtr_arr, k
+ mtr_min=mtr_arr[k]
+ u=where(finite(mtr_arr) and (mtr_arr gt 0) and (mtr_arr lt (mtr_min*threshold_metric)))
 
  if min(b_arr[u]) eq min(b_arr) then begin
   N_b+=1
   b_arr1D=[b_arr1D[0]-db, b_arr1D]
   a_arrX=dblarr(N_a, N_b)
   b_arrX=dblarr(N_a, N_b)
-  eta_arrX=dblarr(N_a, N_b)
+  mtr_arrX=dblarr(N_a, N_b)
   Q0_arrX=dblarr(N_a, N_b)
   for i=0, N_a-1 do begin
    a_arrX[i, *]=a_arr1D[i]
    b_arrX[i, *]=b_arr1D
-   eta_arrX[i, *]=[-1d0, reform(eta_arr[i, *])]
+   mtr_arrX[i, *]=[-1d0, reform(mtr_arr[i, *])]
    Q0_arrX[i, *]=[-1d0, reform(Q0_arr[i, *])]
   endfor
   a_arr=a_arrX
   b_arr=b_arrX
-  eta_arr=eta_arrX
+  mtr_arr=mtr_arrX
   Q0_arr=Q0_arrX
  endif 
   
- FindMinMetricLocation, eta_arr, k
- eta_min=eta_arr[k]
- u=where(finite(eta_arr) and (eta_arr gt 0) and (eta_arr lt (eta_min*threshold_metric)))
+ FindMinMetricLocation, mtr_arr, k
+ mtr_min=mtr_arr[k]
+ u=where(finite(mtr_arr) and (mtr_arr gt 0) and (mtr_arr lt (mtr_min*threshold_metric)))
 
  if max(b_arr[u]) eq max(b_arr) then begin
   N_b+=1
   b_arr1D=[b_arr1D, b_arr1D[N_b-2]+db]
   a_arrX=dblarr(N_a, N_b)
   b_arrX=dblarr(N_a, N_b)
-  eta_arrX=dblarr(N_a, N_b)
+  mtr_arrX=dblarr(N_a, N_b)
   Q0_arrX=dblarr(N_a, N_b)
   for i=0, N_a-1 do begin
    a_arrX[i, *]=a_arr1D[i]
    b_arrX[i, *]=b_arr1D
-   eta_arrX[i, *]=[reform(eta_arr[i, *]), -1d0]
+   mtr_arrX[i, *]=[reform(mtr_arr[i, *]), -1d0]
    Q0_arrX[i, *]=[reform(Q0_arr[i, *]), -1d0]
   endfor
   a_arr=a_arrX
   b_arr=b_arrX
-  eta_arr=eta_arrX
+  mtr_arr=mtr_arrX
   Q0_arr=Q0_arrX
  endif   
  
  u=where((abs(a_arr) ge 10.0) or (abs(b_arr) ge 10.0), k)
  if k gt 0 then begin
-  eta_arr[u]=!values.d_NaN
+  mtr_arr[u]=!values.d_NaN
   Q0_arr[u]=!values.d_NaN
  endif
 end
 
 pro SaveLocalResults, OutDir, metric, threshold, iso, ObsDateTime, ObsFreq, a, b, $
-                      bestQarr, etaArr, etaVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-                      freqList, allQ, allEta, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
+                      bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+                      modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
+                      freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
  fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
        (iso ? '_I' : '_M')+ObsDateTime+ObsFreq+$
        '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav'
         
- if metric eq 'eta' then begin              
-  save, a, b, bestQarr, etaArr, etaVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-        freqList, allQ, allEta, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
-        filename=fname, /compress
- endif else if metric eq 'chi' then begin
-  chiArr=etaArr
-  chiVarArr=etaVarArr
-  allChi=allEta       
-  save, a, b, bestQarr, chiArr, chiVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-        freqList, allQ, allChi, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
-        filename=fname, /compress
- endif else if metric eq 'rho' then begin
-  rhoArr=etaArr
-  rhoVarArr=etaVarArr
-  allRho=allEta       
-  save, a, b, bestQarr, rhoArr, rhoVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-        freqList, allQ, allRho, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
-        filename=fname, /compress  
- endif
+ save, a, b, bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+       modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
+       freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
+       filename=fname, /compress
 end 
 
 function LoadLocalResults, OutDir, metric, threshold, iso, ObsDateTime, ObsFreq, a, b, $
-         bestQarr, etaArr
+         bestQarr, chiArr, rhoArr, etaArr
  fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
        (iso ? '_I' : '_M')+ObsDateTime+ObsFreq+$
        '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav'
@@ -230,14 +216,9 @@ function LoadLocalResults, OutDir, metric, threshold, iso, ObsDateTime, ObsFreq,
  if file_exist(fname) then begin
   o=obj_new('IDL_Savefile', fname)
   o->restore, 'bestQarr'
-  if metric eq 'eta' then o->restore, 'etaArr' $ 
-  else if metric eq 'chi' then begin
-   o->restore, 'chiArr'
-   etaArr=chiArr
-  endif else if metric eq 'rho' then begin
-   o->restore, 'rhoArr'
-   etaArr=rhoArr
-  endif
+  o->restore, 'chiArr'
+  o->restore, 'rhoArr'
+  o->restore, 'etaArr' 
   obj_destroy, o
   res=1
  endif else res=0   
@@ -341,23 +322,17 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ;  shiftX, shiftY - 3D arrays (N_a*N_b*1) of the shifts (in arcseconds) applied to the observed radio maps
 ;                   to obtain the best correlation with the model maps, at different values of a, b, and frequency.
 ;                   The shifts correspond to the obtained best-fit Q0 values.
-;  rho / chi / eta - 3D arrays (N_a*N_b*1) of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics 
-;                    at different values of a and b.
-;  rhoVar / chiVar / etaVar - 3D arrays (N_a*N_b*1) of the shifted metrics defined as:
-;                             rhoVar=variance((I_obs-I_mod)/I_obs),
-;                             chiVar=variance((I_obs-I_mod)/sigma),
-;                             etaVar=variance((I_obs-I_mod)/mean(I_obs)).
-;                             The shifted metrics (at different values of a and b) correspond to the
-;                             obtained best-fit Q0 values, i.e., to the minima of the non-shifted rho / chi / eta
-;                             metrics. The shifted metrics are not used for finding the best-fit heating rate.
+;  rho, chi, eta - 3D arrays (N_a*N_b*1) of the obtained rho^2, chi^2, and eta^2 metrics at different values 
+;                  of a and b. Note that only one of those metrics (defined by the 'metric' keyword) is actually
+;                  minimized; two other metrics correspond to the obtained best-fit Q0 values.
 ; Note, that if the algorithm has failed to find the best-fit heating rate Q0 at a certain combination of a and b 
 ; (e.g., the used metric has no minimum within the valid Q0 range, or has more than one local minimum), the 
-; corresponding bestQ, Imod, CC, rho / chi / eta, shiftX, shiftY, and rhoVar / chiVar / etaVar are set to NaN.
+; corresponding bestQ, Imod, CC, rho, chi, eta, shiftX, and shiftY are set to NaN.
 ; If the data for a certain combination of a and b are missing (because the search for the best-fit Q0 is performed 
 ; only within a subset of the rectangular area determined by the regular grids alist and blist), the 
-; corresponding bestQ, Imod, CC, rho / chi / eta, and rhoVar / chiVar / etaVar are set to -1. Therefore, when 
-; analyzing the results, only the points where bestQ is finite and bestQ>0 should be considered.
-; If the Summary*.sav file exists, it will be overwritten.
+; corresponding bestQ, Imod, CC, rho, chi, and eta are set to -1. Therefore, when  analyzing the results, only the 
+; points where bestQ is finite and bestQ>0 should be considered. If the Summary*.sav file exists, it will be 
+; overwritten.
 
 ; The program saves the temporary progress: for each (a, b) combination it creates in the OutDir directory a .sav 
 ; file with the name starting with 'fit' and including the used metric, threshold, indicator of the multithermal 
@@ -365,14 +340,16 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ; These .sav files contain the following fields:
 ;  freqList - 1-element array containing the emission frequency, in GHz.
 ;  bestQarr - 1-element array containing the obtained best-fit heating rate Q0.
-;  rhoArr / chiArr / etaArr - 1-element array containing the obtained best (minimum) rho^2 / chi^2 / eta^2 metric.
+;  rhoArr, chiArr, etaArr - 1-element arrays containing the obtained rho^2, chi^2, and eta^2 metric.
+;                           Note that only one of those metrics (defined by the 'metric' keyword) is actually
+;                           minimized; two other metrics correspond to the obtained best-fit Q0 values.
 ;  modImageArr - map object containing the best-fit model radio map (corresponding to the best-fit heating rate Q0). 
 ;                The map is not convolved with the instrument beam.
 ;  modImageConvArr - map object containingthe above-mentioned best-fit model radio map convolved with the 
 ;                    instrument beam.
 ;  obsImageArr - map object containing the observed radio map rebinned and shifted to match the best-fit model map.
 ; If the algorithm failed to find the best-fit heating rate (e.g., the used metric has no minimum within the 
-; valid Q0 range, or has more than one local minimum), the corresponding BestQarr and rhoArr / chiArr / etaArr are 
+; valid Q0 range, or has more than one local minimum), the corresponding BestQarr, rhoArr, chiArr, and etaArr are 
 ; set to NaN, and the corresponding image maps contain all zeros.
 ; Note: the program does not overwrite the existing fit*.sav files. If the program is interrupted, on the next launch
 ; it will compute the results only for those (a, b) values that have not been processed before.
@@ -413,45 +390,61 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  N_b=1
  
  if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_start, b_start, $
-                      bestQarr, etaArr) then begin
+                      bestQarr, chiArr, rhoArr, etaArr) then begin
   FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a_start, b_start, Q0start, iso, $
-                bestQarr, etaArr, etaVarArr, IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                freqList, allQ, allEta, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
+                bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+                IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
+                freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
   SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_start, b_start, $
-                    bestQarr, etaArr, etaVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-                    freqList, allQ, allEta, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
- endif                                 
- eta_arr=reform(etaArr)
+                    bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+                    modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
+                    freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
+ endif   
+ 
+ case metric of                
+  'chi': mtr_arr=reform(chiArr)
+  'rho': mtr_arr=reform(rhoArr)              
+  'eta': mtr_arr=reform(etaArr)
+ endcase
+ 
  Q0_arr=reform(bestQarr)
  
- done=~finite(eta_arr)
+ done=~finite(mtr_arr)
  
  while ~done do begin
-  ExpandArrays1, eta_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db
+  ExpandArrays1, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db
   
-  FindMinMetricLocation, eta_arr, k
-  idx=array_indices(eta_arr, k)
+  FindMinMetricLocation, mtr_arr, k
+  idx=array_indices(mtr_arr, k)
   i0=idx[0]
   j0=idx[1]
   
-  for i=i0-1, i0+1 do for j=j0-1, j0+1 do if finite(eta_arr[i, j]) && (eta_arr[i, j] lt 0) then begin
+  for i=i0-1, i0+1 do for j=j0-1, j0+1 do if finite(mtr_arr[i, j]) && (mtr_arr[i, j] lt 0) then begin
    if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
-                        bestQarr, etaArr) then begin
+                        bestQarr, chiArr, rhoArr, etaArr) then begin
     FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                   a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], iso, $
-                  bestQarr, etaArr, etaVarArr, IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                  freqList, allQ, allEta, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
+                  bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+                  IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
+                  freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
     SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
-                      bestQarr, etaArr, etaVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-                      freqList, allQ, allEta, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
-   endif                                 
-   eta_arr[i, j]=reform(etaArr)
+                      bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+                      modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
+                      freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
+   endif       
+   
+   case metric of                      
+    'chi': mtr_arr[i, j]=reform(chiArr)
+    'rho': mtr_arr[i, j]=reform(rhoArr)    
+    'eta': mtr_arr[i, j]=reform(etaArr)
+   endcase
+   
    Q0_arr[i, j]=reform(bestQarr)
   endif
   
   done=1
   for i=i0-1, i0+1 do for j=j0-1, j0+1 do $
-   if ((i ne i0) || (j ne j0)) && finite(eta_arr[i, j]) && (eta_arr[i, j] lt eta_arr[i0, j0]) then done=0 
+   if ((i ne i0) || (j ne j0)) && finite(mtr_arr[i, j]) && (mtr_arr[i, j] lt mtr_arr[i0, j0]) then done=0 
  endwhile
  
  print, 'Exploring the area within the threshold'
@@ -461,29 +454,37 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  while ~done do begin
   done=1
   
-  ExpandArrays2, eta_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric
+  ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric
   
-  FindMinMetricLocation, eta_arr, k
-  eta_min=eta_arr[k]
-  u=where(finite(eta_arr) and (eta_arr gt 0) and (eta_arr lt (eta_min*threshold_metric)), n)
+  FindMinMetricLocation, mtr_arr, k
+  mtr_min=mtr_arr[k]
+  u=where(finite(mtr_arr) and (mtr_arr gt 0) and (mtr_arr lt (mtr_min*threshold_metric)), n)
   
   for l=0, n-1 do begin
-   idx=array_indices(eta_arr, u[l])
+   idx=array_indices(mtr_arr, u[l])
    i0=idx[0]
    j0=idx[1]
    
-   for i=i0-1, i0+1 do for j=j0-1, j0+1 do if finite(eta_arr[i, j]) && (eta_arr[i, j] lt 0) then begin
+   for i=i0-1, i0+1 do for j=j0-1, j0+1 do if finite(mtr_arr[i, j]) && (mtr_arr[i, j] lt 0) then begin
     if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
-                        bestQarr, etaArr) then begin
+                         bestQarr, chiArr, rhoArr, etaArr) then begin
      FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                    a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], iso, $
-                   bestQarr, etaArr, etaVarArr, IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                   freqList, allQ, allEta, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
+                   bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+                   IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
+                   freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
      SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
-                       bestQarr, etaArr, etaVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-                       freqList, allQ, allEta, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
+                       bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+                       modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
+                       freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
     endif                                 
-    eta_arr[i, j]=reform(etaArr)
+
+    case metric of                      
+     'chi': mtr_arr[i, j]=reform(chiArr)
+     'rho': mtr_arr[i, j]=reform(rhoArr)    
+     'eta': mtr_arr[i, j]=reform(etaArr)
+    endcase
+    
     Q0_arr[i, j]=reform(bestQarr)
     done=0
    endif
@@ -498,6 +499,10 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  blist=b_arr1D
  
  bestQ=dblarr(N_a, N_b, N_freq)
+ chi=dblarr(N_a, N_b, N_freq)
+ chiVar=dblarr(N_a, N_b, N_freq)
+ rho=dblarr(N_a, N_b, N_freq)
+ rhoVar=dblarr(N_a, N_b, N_freq)
  eta=dblarr(N_a, N_b, N_freq)
  etaVar=dblarr(N_a, N_b, N_freq)
  Iobs=dblarr(N_a, N_b, N_freq)
@@ -507,8 +512,12 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  shiftY=dblarr(N_a, N_b, N_freq)
  
  bestQ[*]=-1
+ chi[*]=-1
+ chiVar[*]=-1
+ rho[*]=-1
+ rhoVar[*]=-1 
  eta[*]=-1
- etaVar[*]=-1
+ etaVar[*]=-1 
  Iobs[*]=-1
  Imod[*]=-1
  CC[*]=-1
@@ -520,6 +529,10 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   b=b_arr1D[j]
   
   if (abs(a) ge 10.0) || (abs(b) ge 10.0) then begin
+   chi[i, j, *]=!values.d_NaN 
+   chiVar[i, j, *]=!values.d_NaN
+   rho[i, j, *]=!values.d_NaN 
+   rhoVar[i, j, *]=!values.d_NaN      
    eta[i, j, *]=!values.d_NaN 
    etaVar[i, j, *]=!values.d_NaN   
    bestQ[i, j, *]=!values.d_NaN 
@@ -533,8 +546,12 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   
    if file_exist(fname) then begin
     o=obj_new('IDL_Savefile', fname)
-    o->restore, (metric eq 'eta') ? 'etaArr' : ((metric eq 'chi') ? 'chiArr' : 'rhoArr')
-    o->restore, (metric eq 'eta') ? 'etaVarArr' : ((metric eq 'chi') ? 'chiVarArr' : 'rhoVarArr')
+    o->restore, 'chiArr'
+    o->restore, 'chiVarArr'
+    o->restore, 'rhoArr'
+    o->restore, 'rhoVarArr'        
+    o->restore, 'etaArr'
+    o->restore, 'etaVarArr'
     o->restore, 'bestQarr'
     o->restore, 'IobsArr'
     o->restore, 'ImodArr'
@@ -543,8 +560,12 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
     obj_destroy, o      
   
     for k=0, N_freq-1 do begin
-     eta[i, j, k]=(metric eq 'eta') ? etaArr[k] : ((metric eq 'chi') ? chiArr[k] : rhoArr[k]) 
-     etaVar[i, j, k]=(metric eq 'eta') ? etaVarArr[k] : ((metric eq 'chi') ? chiVarArr[k] : rhoVarArr[k])  
+     chi[i, j, k]=chiArr[k]
+     chiVar[i, j, k]=chiVarArr[k]
+     rho[i, j, k]=rhoArr[k]
+     rhoVar[i, j, k]=rhoVarArr[k]         
+     eta[i, j, k]=etaArr[k]
+     etaVar[i, j, k]=etaVarArr[k]  
      bestQ[i, j, k]=bestQarr[k]
      Iobs[i, j, k]=IobsArr[k]
      Imod[i, j, k]=ImodArr[k]
@@ -561,20 +582,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  fname1=OutDir+'Summary_'+metric+'_thr'+string(threshold_img, format='(F5.3)')+$
         (iso ? '_I': '_M')+ObsDateTime+ObsFreq+'.sav'
  
- if metric eq 'eta' then begin
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, eta, etaVar, modelFileName, EBTELfileName, ObsID, $
-        shiftX, shiftY, filename=fname1
- endif else if metric eq 'chi' then begin
-  chi=eta
-  chiVar=etaVar
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, modelFileName, EBTELfileName, ObsID, $
-        shiftX, shiftY, filename=fname1
- endif else begin
-  rho=eta
-  rhoVar=etaVar
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, rho, rhoVar, modelFileName, EBTELfileName, ObsID, $
-        shiftX, shiftY, filename=fname1  
- endelse
+ save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, rho, rhoVar, eta, etaVar, $
+       modelFileName, EBTELfileName, ObsID, shiftX, shiftY, filename=fname1
  
  print, 'Done'
  

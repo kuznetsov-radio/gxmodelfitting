@@ -1,7 +1,7 @@
 pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  alist, blist, xc, yc, dx, dy, Nx, Ny, $
                  RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, $
-                 MultiThermal=MultiThermal, ObsDateTime=ObsDateTime
+                 MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq
 ;This program searches for the heating rate value Q0 that provides the best agreement between the model and
 ;observed radio maps, for the specified parameters a and b of the coronal heating model.
 ;
@@ -39,7 +39,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ; Default: all *.sav files in the RefDir directory.
 ;
 ; Q0start - the initial value of Q0. It can be either:
-; a scalar value (applied to all a an b), or
+; a scalar value (applied to all a and b), or
 ; a 2D N_a*N_b array, where N_a and N_b are the sizes of alist and blist arrays.
 ; Default: the best-fit Q0 parameters for AR 12924 (extrapolated to the specified a and b) will be used.
 ;
@@ -63,6 +63,12 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;
 ; ObsDateTime - an additional string added to the names of the resulting files.
 ; Default: ''
+; 
+; noMultiFreq - if not set (by default), the code optimizes the computations by computing the metrics at all
+;  specified frequencies simultaneously. Although the minimization is performed frequency-by-frequency, the Q0 grid
+;  and the corresponding metrics computed during the minimization at lower frequencies are then used as pre-computed
+;  data at higher frequencies.
+;  If set, all frequencies are processed independently; this can be slower, but sometimes more reliable.
 ;
 ;Results:
 ; As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file
@@ -72,8 +78,9 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ; These .sav files contain the following fields:
 ;  freqList - array of the emission frequencies, in GHz.
 ;  bestQarr - array of the obtained best-fit heating rates Q0 at different frequencies.
-;  rhoArr / chiArr / etaArr - array of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics at 
-;                             different frequencies.
+;  rhoArr, chiArr, etaArr - arrays of the obtained rho^2, chi^2, and eta^2 metrics at different frequencies.
+;                           Note that only one of those metrics (defined by the 'metric' keyword) is actually
+;                           minimized; two other metrics correspond to the obtained best-fit Q0 values. 
 ;  modImageArr - (multi-frequency) map object containing the best-fit model radio maps (corresponding to the
 ;                best-fit heating rates Q0) at different frequencies. The maps are not convolved with the 
 ;                instrument beam.
@@ -82,8 +89,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;  obsImageArr - (multi-frequency) map object containing the observed radio maps rebinned and shifted to
 ;                match the best-fit model maps at the corresponding frequencies.
 ; If the algorithm failed to find the best-fit heating rate at a certain frequency (e.g., the used metric has 
-; no minimum within the valid Q0 range, or has more than one local minimum), the corresponding BestQarr and
-; rhoArr / chiArr / etaArr are set to NaN, and the corresponding image maps contain all zeros.
+; no minimum within the valid Q0 range, or has more than one local minimum), the corresponding BestQarr, rhoArr, 
+; chiArr, and etaArr are set to NaN, and the corresponding image maps contain all zeros.
 ; Note: the program does not overwrite the existing fit*.sav files. If the program is interrupted, on the next launch
 ; it will compute the results only for those (a, b) values that have not been processed before.
 ; 
@@ -101,15 +108,9 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;  shiftX, shiftY - 3D arrays (N_a*N_b*N_freq) of the shifts (in arcseconds) applied to the observed radio maps
 ;                   to obtain the best correlation with the model maps, at different values of a, b, and frequency.
 ;                   The shifts correspond to the obtained best-fit Q0 values.
-;  rho / chi / eta - 3D arrays (N_a*N_b*N_freq) of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics 
-;                    at different values of a, b, and frequency.
-;  rhoVar / chiVar / etaVar - 3D arrays (N_a*N_b*N_freq) of the shifted metrics defined as:
-;                             rhoVar=variance((I_obs-I_mod)/I_obs),
-;                             chiVar=variance((I_obs-I_mod)/sigma),
-;                             etaVar=variance((I_obs-I_mod)/mean(I_obs)).
-;                             The shifted metrics (at different values of a, b, and frequency) correspond to the
-;                             obtained best-fit Q0 values, i.e., to the minima of the non-shifted rho / chi / eta
-;                             metrics. The shifted metrics are not used for finding the best-fit heating rate.
+;  rho, chi, eta - 3D arrays (N_a*N_b*N_freq) of the obtained rho^2, chi^2, and eta^2 metrics at different values of 
+;                  a, b, and frequency. Note that only one of those metrics (defined by the 'metric' keyword) is 
+;                  actually minimized; two other metrics correspond to the obtained best-fit Q0 values. 
 ; If the Summary*.sav file exists, it will be overwritten.
 
  if exist(RefFiles) then ObsFileNames=RefDir+RefFiles else ObsFileNames=file_search(RefDir+'*.sav')
@@ -164,28 +165,15 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
    tstart1=systime(1)
    
    FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a, b, Qstart, iso, $
-                 bestQarr, etaArr, etaVarArr, IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                 freqList, allQ, allEta, modImageConvArr, obsImageArr, thr=threshold, metric=metric 
-                 
-   if metric eq 'eta' then begin              
-    save, a, b, bestQarr, etaArr, etaVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-          freqList, allQ, allEta, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
-          filename=fname, /compress
-   endif else if metric eq 'chi' then begin
-    chiArr=etaArr
-    chiVarArr=etaVarArr
-    allChi=allEta       
-    save, a, b, bestQarr, chiArr, chiVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-          freqList, allQ, allChi, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
-          filename=fname, /compress
-   endif else if metric eq 'rho' then begin
-    rhoArr=etaArr
-    rhoVarArr=etaVarArr
-    allRho=allEta       
-    save, a, b, bestQarr, rhoArr, rhoVarArr, modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-          freqList, allQ, allRho, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
-          filename=fname, /compress    
-   endif       
+                 bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+                 IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
+                 freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold, metric=metric, $
+                 noMultiFreq=noMultiFreq
+         
+   save, a, b, bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+         modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
+         freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
+         filename=fname, /compress
    
    print, 'The best fit Q for a=', a, ', b=', b, ' computed in ', systime(1)-tstart1, ' s'
    print, 'Total elapsed time: ', systime(1)-tstart0, ' s'
@@ -198,6 +186,10 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  N_freq=n_elements(freqList)
  
  bestQ=dblarr(N_a, N_b, N_freq)
+ chi=dblarr(N_a, N_b, N_freq)
+ chiVar=dblarr(N_a, N_b, N_freq)
+ rho=dblarr(N_a, N_b, N_freq)
+ rhoVar=dblarr(N_a, N_b, N_freq)  
  eta=dblarr(N_a, N_b, N_freq)
  etaVar=dblarr(N_a, N_b, N_freq)
  Iobs=dblarr(N_a, N_b, N_freq)
@@ -214,17 +206,26 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
         (iso ? '_I': '_M')+ObsDateTime+$
         '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav' 
   o=obj_new('IDL_Savefile', fname)
-  o->restore, (metric eq 'eta') ? 'etaArr' : ((metric eq 'chi') ? 'chiArr' : 'rhoArr')
-  o->restore, (metric eq 'eta') ? 'etaVarArr' : ((metric eq 'chi') ? 'chiVarArr' : 'rhoVarArr')
+  o->restore, 'chiArr'
+  o->restore, 'chiVarArr'
+  o->restore, 'rhoArr'
+  o->restore, 'rhoVarArr'    
+  o->restore, 'etaArr'
+  o->restore, 'etaVarArr'
   o->restore, 'bestQarr'
   o->restore, 'IobsArr'
   o->restore, 'ImodArr'
   o->restore, 'CCarr'
+  o->restore, 'obsImageArr'
   obj_destroy, o      
   
   for k=0, N_freq-1 do begin
-   eta[i, j, k]=(metric eq 'eta') ? etaArr[k] : ((metric eq 'chi') ? chiArr[k] : rhoArr[k]) 
-   etaVar[i, j, k]=(metric eq 'eta') ? etaVarArr[k] : ((metric eq 'chi') ? chiVarArr[k] : rhoVarArr[k])  
+   chi[i, j, k]=chiArr[k] 
+   chiVar[i, j, k]=chiVarArr[k]
+   rho[i, j, k]=rhoArr[k] 
+   rhoVar[i, j, k]=rhoVarArr[k]           
+   eta[i, j, k]=etaArr[k] 
+   etaVar[i, j, k]=etaVarArr[k]  
    bestQ[i, j, k]=bestQarr[k]
    Iobs[i, j, k]=IobsArr[k]
    Imod[i, j, k]=ImodArr[k]
@@ -239,20 +240,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  fname1=OutDir+'Summary_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
         (iso ? '_I': '_M')+ObsDateTime+'.sav'
  
- if metric eq 'eta' then begin
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, eta, etaVar, modelFileName, EBTELfileName, ObsID, $
-        shiftX, shiftY, filename=fname1
- endif else if metric eq 'chi' then begin
-  chi=eta
-  chiVar=etaVar
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, modelFileName, EBTELfileName, ObsID, $
-        shiftX, shiftY, filename=fname1
- endif else begin
-  rho=eta
-  rhoVar=etaVar
-  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, rho, rhoVar, modelFileName, EBTELfileName, ObsID, $
-        shiftX, shiftY, filename=fname1  
- endelse
+ save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, rho, rhoVar, eta, etaVar, $
+       modelFileName, EBTELfileName, ObsID, shiftX, shiftY, filename=fname1
  
  print, 'Done'
 end
