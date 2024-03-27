@@ -108,7 +108,7 @@ If the data for a certain combination of a and b are missing (because the search
 The program saves the temporary progress: for each (a, b) combination it creates in the OutDir directory a .sav file with the name starting with 'fit' and including the used metric, threshold, indicator of the multithermal approach, a and b values, and (optionally) the ObsDateTime and ObsFreq strings. These .sav files contain the following fields:<br/>
 freqList - 1-element array containing the emission frequency, in GHz.<br/>
 bestQarr - 1-element array containing the obtained best-fit heating rate Q0.<br/>
-rhoArr, chiArr, etaArr -1-element arrays containing the obtained rho^2, chi^2, and eta^2 metrics. Note that only one of those metrics (defined by the 'metric' keyword) is actually minimized; two other metrics correspond to the obtained best-fit Q0 values.
+rhoArr, chiArr, etaArr -1-element arrays containing the obtained rho^2, chi^2, and eta^2 metrics. Note that only one of those metrics (defined by the 'metric' keyword) is actually minimized; two other metrics correspond to the obtained best-fit Q0 values.<br/>
 modImageArr - map object containing the best-fit model radio map (corresponding to the best-fit heating rate Q0). The map is not convolved with the instrument beam.<br/>
 modImageConvArr - map object containingthe above-mentioned best-fit model radio map convolved with the instrument beam.<br/>
 obsImageArr - map object containing the observed radio map rebinned and shifted to match the best-fit model map.<br/>
