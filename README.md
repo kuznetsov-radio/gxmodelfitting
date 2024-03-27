@@ -10,7 +10,7 @@ The data (GX Simulator model, etc.) required to run the examples can be found at
 
 Here, we repeat the headers of the above-mentioned routines with the descriptions of the parameters:
 
-pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, alist, blist, xc, yc, dx, dy, Nx, Ny, RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime
+pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, alist, blist, xc, yc, dx, dy, Nx, Ny, RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq
 
 Input parameters:<br/>
 RefDir - the directory where the observed radio maps are stored. If the parameter RefFiles is omitted, the program loads all \*.sav files in the RefDir directory. Otherwise, the program loads the file(s) specified by RefDir+RefFiles. Each .sav file should contain a 'ref' map object with three maps:<br/>
@@ -38,16 +38,16 @@ metric - the metric to minimize. It can be one of the following three options:<b
 All averagings are performed over the above-mentioned sub-region determined by the threshold. Default: 'eta'.<br/>
 MultiThermal - if set, the formulae for the free-free and gyroresonance emissions from multithermal plasma (described by the DEM and DDM, respectively) are used, see Fleishman, Kuznetsov & Landi (2021). If not set, the isothermal approximation with the plasma density and temperature derived from the DDM or DEM (from the DDM, if both are specified) is used. Default: 0 (isothermal approximation is assumed).<br/>
 ObsDateTime - an additional string added to the names of the resulting files. Default: ''<br/>
+noMultiFreq - if not set (by default), the code optimizes the computations by computing the metrics at all specified frequencies simultaneously. Although the minimization is performed frequency-by-frequency, the Q0 grid and the corresponding metrics computed during the minimization at lower frequencies are then used as pre-computed data at higher frequencies. If set, all frequencies are processed independently; this can be slower, but sometimes more reliable.
 
 Results:<br/>
 As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file with the name starting with 'fit' and including the used metric, threshold, indicator of the multithermal approach, a and b values, and (optionally) the ObsDateTime string. These .sav files contain the following fields:<br/>
 freqList - array of the emission frequencies, in GHz.<br/>
 bestQarr - array of the obtained best-fit heating rates Q0 at different frequencies.<br/>
-rhoArr / chiArr / etaArr - array of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics at different frequencies.<br/>
-modImageArr - (multi-frequency) map object containing the best-fit model radio maps (corresponding to the best-fit heating rates Q0) at different frequencies. The maps are not convolved with the instrument beam.<br/>
+rhoArr, chiArr, etaArr - arrays of the obtained rho^2, chi^2, and eta^2 metrics at different frequencies. Note that only one of those metrics (defined by the 'metric' keyword) is actually minimized; two other metrics correspond to the obtained best-fit Q0 values.<br/>
 modImageConvArr - (multi-frequency) map object containing the above-mentioned best-fit model radio maps convolved with the instrument beam.<br/>
 obsImageArr - (multi-frequency) map object containing the observed radio maps rebinned and shifted to match the best-fit model maps at the corresponding frequencies.<br/>
-If the algorithm failed to find the best-fit heating rate at a certain frequency (e.g., the used metric has no minimum within the valid Q0 range, or has more than one local minimum), the corresponding BestQarr and rhoArr / chiArr / etaArr are set to NaN, and the corresponding image maps contain all zeros. Note: the program does not overwrite the existing fit*.sav files. If the program is interrupted, on the next launch it will compute the results only for those (a, b) values that have not been processed before.<br/>
+If the algorithm failed to find the best-fit heating rate at a certain frequency (e.g., the used metric has no minimum within the valid Q0 range, or has more than one local minimum), the corresponding BestQarr, rhoArr, chiArr, and etaArr are set to NaN, and the corresponding image maps contain all zeros. Note: the program does not overwrite the existing fit*.sav files. If the program is interrupted, on the next launch it will compute the results only for those (a, b) values that have not been processed before.<br/>
 Also, the program creates in the OutDir directory a .sav file with the name starting with 'Summary' and including the used metric, threshold, indicator of the multithermal approach, and (optionally) the ObsDateTime string. This .sav file contains the following fields:<br/>
 alist, blist - the input alist and blist parameters.<br/>
 freqList - array of the emission frequencies, in GHz.<br/>
@@ -55,12 +55,7 @@ bestQ - 3D array (N_a\*N_b\*N_freq, where N_a, N_b, and N_freq are the sizes of 
 Iobs, Imod - 3D arrays (N_a\*N_b\*N_freq) of the total observed and model radio fluxes at different values of a, b, and frequency. The fluxes correspond to the obtained best-fit Q0 values.<br/>
 CC - 3D array (N_a\*N_b\*N_freq) of the correlation coefficients of the observed and model radio maps at different values of a, b, and frequency. The coefficients correspond to the obtained best-fit Q0 values.<br/>
 shiftX, shiftY - 3D arrays (N_a\*N_b\*N_freq) of the shifts (in arcseconds) applied to the observed radio maps to obtain the best correlation with the model maps, at different values of a, b, and frequency. The shifts correspond to the obtained best-fit Q0 values.<br/>
-rho / chi / eta - 3D arrays (N_a\*N_b\*N_freq) of the obtained best (minimum) rho^2 / chi^2 / eta^2 metrics at different values of a, b, and frequency.<br/>
-rhoVar / chiVar / etaVar - 3D arrays (N_a\*N_b\*N_freq) of the shifted metrics defined as:<br/>
-rhoVar=variance((I_obs-I_mod)/I_obs),<br/>
-chiVar=variance((I_obs-I_mod)/sigma),<br/>
-etaVar=variance((I_obs-I_mod)/mean(I_obs)).<br/>
-The shifted metrics (at different values of a, b, and frequency) correspond to the obtained best-fit Q0 values, i.e., to the minima of the non-shifted rho / chi / eta metrics. The shifted metrics are not used for finding the best-fit heating rate.<br/>
+rho, chi, eta - 3D arrays (N_a\*N_b\*N_freq) of the obtained rho^2, chi^2, and eta^2 metrics at different values of a, b, and frequency. Note that only one of those metrics (defined by the 'metric' keyword) is actually minimized; two other metrics correspond to the obtained best-fit Q0 values.<br/>
 If the Summary\*.sav file exists, it will be overwritten.
 
 pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileName, OutDir, $
