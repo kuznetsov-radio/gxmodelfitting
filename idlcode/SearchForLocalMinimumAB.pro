@@ -340,12 +340,12 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ; These .sav files contain the following fields:
 ;  freqList - 1-element array containing the emission frequency, in GHz.
 ;  bestQarr - 1-element array containing the obtained best-fit heating rate Q0.
-;  rhoArr, chiArr, etaArr - 1-element arrays containing the obtained rho^2, chi^2, and eta^2 metric.
+;  rhoArr, chiArr, etaArr - 1-element arrays containing the obtained rho^2, chi^2, and eta^2 metrics.
 ;                           Note that only one of those metrics (defined by the 'metric' keyword) is actually
 ;                           minimized; two other metrics correspond to the obtained best-fit Q0 values.
 ;  modImageArr - map object containing the best-fit model radio map (corresponding to the best-fit heating rate Q0). 
 ;                The map is not convolved with the instrument beam.
-;  modImageConvArr - map object containingthe above-mentioned best-fit model radio map convolved with the 
+;  modImageConvArr - map object containing the above-mentioned best-fit model radio map convolved with the 
 ;                    instrument beam.
 ;  obsImageArr - map object containing the observed radio map rebinned and shifted to match the best-fit model map.
 ; If the algorithm failed to find the best-fit heating rate (e.g., the used metric has no minimum within the 
