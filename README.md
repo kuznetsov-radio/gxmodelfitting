@@ -10,7 +10,7 @@ The data (GX Simulator model, etc.) required to run the examples can be found at
 
 Here, we repeat the headers of the above-mentioned routines with the descriptions of the parameters:
 
-pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, alist, blist, xc, yc, dx, dy, Nx, Ny, RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM
+pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, alist, blist, xc, yc, dx, dy, Nx, Ny [, RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM]
 
 Input parameters:<br/>
 RefDir - the directory where the observed radio maps are stored. If the parameter RefFiles is omitted, the program loads all \*.sav files in the RefDir directory. Otherwise, the program loads the file(s) specified by RefDir+RefFiles. Each .sav file should contain a 'ref' map object with three maps:<br/>
@@ -39,7 +39,7 @@ All averagings are performed over the above-mentioned sub-region determined by t
 MultiThermal - if set, the formulae for the free-free and gyroresonance emissions from multithermal plasma (described by the DEM and DDM, respectively) are used, see Fleishman, Kuznetsov & Landi (2021). If not set, the isothermal approximation with the plasma density and temperature derived from the DDM or DEM (from the DDM, if both are specified) is used. Default: 0 (isothermal approximation is assumed).<br/>
 ObsDateTime - an additional string added to the names of the resulting files. Default: ''<br/>
 noMultiFreq - if not set (by default), the code optimizes the computations by computing the metrics at all specified frequencies simultaneously. Although the minimization is performed frequency-by-frequency, the Q0 grid and the corresponding metrics computed during the minimization at lower frequencies are then used as pre-computed data at higher frequencies. If set, all frequencies are processed independently; this can be slower, but sometimes more reliable.<br/>
-DEM, DDM - these keywords are only applicable if the chosen EBTEL .sav file contains both the DEM and DDM tables. In this case, if the /DEM keyword is set, the code loads the DEM table only (the DDM table is ignored). Similarly, if the /DDM keyword is set, the code loads the DDM table only (the DEM table is ignored). If both /DEM and /DDM keywords (or none of them) are set, the code loads both tables. If the chosen file contains only one EBTEL table (either DEM or DDM), the code loads that table; the /DEM and /DDM keywords are ignored.
+DEM, DDM - these keywords are only applicable if the chosen EBTELfileName .sav file contains both the DEM and DDM tables. In this case, if the /DEM keyword is set, the code loads the DEM table only (the DDM table is ignored). Similarly, if the /DDM keyword is set, the code loads the DDM table only (the DEM table is ignored). If both /DEM and /DDM keywords (or none of them) are set, the code loads both tables. If the chosen file contains only one EBTEL table (either DEM or DDM), the code loads that table; the /DEM and /DDM keywords are ignored.
 
 Results:<br/>
 As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file with the name starting with 'fit' and including the used metric, threshold, indicator of the multithermal approach, a and b values, and (optionally) the ObsDateTime string. These .sav files contain the following fields:<br/>
@@ -59,7 +59,7 @@ shiftX, shiftY - 3D arrays (N_a\*N_b\*N_freq) of the shifts (in arcseconds) appl
 rho, chi, eta - 3D arrays (N_a\*N_b\*N_freq) of the obtained rho^2, chi^2, and eta^2 metrics at different values of a, b, and frequency. Note that only one of those metrics (defined by the 'metric' keyword) is actually minimized; two other metrics correspond to the obtained best-fit Q0 values.<br/>
 If the Summary\*.sav file exists, it will be overwritten.
 
-pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileName, OutDir, xc, yc, dx, dy, Nx, Ny, a_start, b_start, da, db, Q0start=Q0start, metric=metric, threshold_img=threshold_img, threshold_metric=threshold_metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM
+pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileName, OutDir, xc, yc, dx, dy, Nx, Ny, a_start, b_start, da, db [, Q0start=Q0start, metric=metric, threshold_img=threshold_img, threshold_metric=threshold_metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM]
 
 Input parameters:<br/>
 RefFileName - name of the .sav file that contains the observed radio maps (at a single frequency). The file should contain a 'ref' map object with three maps:<br/>
@@ -89,7 +89,7 @@ threshold_metric - the threshold value that determines the area of "good agreeme
 MultiThermal - if set, the formulae for the free-free and gyroresonance emissions from multithermal plasma (described by the DEM and DDM, respectively) are used, see Fleishman, Kuznetsov & Landi (2021). If not set, the isothermal approximation with the plasma density and temperature derived from the DDM or DEM (from the DDM, if both are specified) is used. Default: 0 (isothermal approximation is assumed).<br/>
 ObsDateTime - an additional string added to the names of the resulting files. Default: ''<br/>
 ObsFreq - an additional string added to the names of the resulting files. Default: ''<br/>
-DEM, DDM - these keywords are only applicable if the chosen EBTEL .sav file contains both the DEM and DDM tables. In this case, if the /DEM keyword is set, the code loads the DEM table only (the DDM table is ignored). Similarly, if the /DDM keyword is set, the code loads the DDM table only (the DEM table is ignored). If both /DEM and /DDM keywords (or none of them) are set, the code loads both tables. If the chosen file contains only one EBTEL table (either DEM or DDM), the code loads that table; the /DEM and /DDM keywords are ignored.
+DEM, DDM - these keywords are only applicable if the chosen EBTELfileName .sav file contains both the DEM and DDM tables. In this case, if the /DEM keyword is set, the code loads the DEM table only (the DDM table is ignored). Similarly, if the /DDM keyword is set, the code loads the DDM table only (the DEM table is ignored). If both /DEM and /DDM keywords (or none of them) are set, the code loads both tables. If the chosen file contains only one EBTEL table (either DEM or DDM), the code loads that table; the /DEM and /DDM keywords are ignored.
 
 Results:<br/>
 The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency is considered. The program creates in the OutDir directory a .sav file with the name starting with 'Summary' and including the used metric, threshold, indicator of the multithermal approach, and (optionally) the ObsDateTime and ObsFreq strings. This .sav file contains the following fields:<br/>
