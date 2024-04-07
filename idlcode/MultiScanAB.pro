@@ -1,7 +1,7 @@
 pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  alist, blist, xc, yc, dx, dy, Nx, Ny, $
                  RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, $
-                 MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq
+                 MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM
 ;This program searches for the heating rate value Q0 that provides the best agreement between the model and
 ;observed radio maps, for the specified parameters a and b of the coronal heating model.
 ;
@@ -70,6 +70,14 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;  data at higher frequencies.
 ;  If set, all frequencies are processed independently; this can be slower, but sometimes more reliable.
 ;
+; DEM, DDM - these keywords are only applicable if the chosen EBTELfileName .sav file contains both the DEM and DDM 
+;  tables. 
+;  In this case, if the /DEM keyword is set, the code loads the DEM table only (the DDM table is ignored). 
+;  Similarly, if the /DDM keyword is set, the code loads the DDM table only (the DEM table is ignored). 
+;  If both /DEM and /DDM keywords (or none of them) are set, the code loads both tables.
+;  If the chosen file contains only one EBTEL table (either DEM or DDM), the code loads that table; 
+;  the /DEM and /DDM keywords are ignored.
+;
 ;Results:
 ; As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file
 ; with the name starting with 'fit' and including the used metric, threshold, indicator of the multithermal 
@@ -118,7 +126,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 
  model=LoadGXmodel(ModelFileName)
  
- ebtel=LoadEBTEL(EBTELfileName)
+ ebtel=LoadEBTEL(EBTELfileName, DEM=DEM, DDM=DDM)
  
  N_a=n_elements(alist)
  N_b=n_elements(blist)

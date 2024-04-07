@@ -231,7 +231,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                              a_start, b_start, da, db, $
                              Q0start=Q0start, metric=metric, $
                              threshold_img=threshold_img, threshold_metric=threshold_metric, $
-                             MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq
+                             MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM
 ;This program searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement 
 ;between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations
 ;comparison metric. 
@@ -305,6 +305,14 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ; ObsFreq - an additional string added to the names of the resulting files.
 ; Default: ''
 ;
+; DEM, DDM - these keywords are only applicable if the chosen EBTELfileName .sav file contains both the DEM and DDM 
+;  tables. 
+;  In this case, if the /DEM keyword is set, the code loads the DEM table only (the DDM table is ignored). 
+;  Similarly, if the /DDM keyword is set, the code loads the DDM table only (the DEM table is ignored). 
+;  If both /DEM and /DDM keywords (or none of them) are set, the code loads both tables.
+;  If the chosen file contains only one EBTEL table (either DEM or DDM), the code loads that table; 
+;  the /DEM and /DDM keywords are ignored.
+;
 ;Results:
 ; The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency
 ; is considered. The program creates in the OutDir directory a .sav file with the name starting with 'Summary' and 
@@ -360,7 +368,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 
  model=LoadGXmodel(ModelFileName)
  
- ebtel=LoadEBTEL(EBTELfileName)
+ ebtel=LoadEBTEL(EBTELfileName, DEM=DEM, DDM=DDM)
  
  if ~exist(Q0start) then Q0start=exp(-10.1-0.193*a_start+2.17*b_start)
  
