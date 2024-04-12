@@ -53,12 +53,12 @@ function GetSmoothedMax, m, sx, sy
  if ((sx/sy) gt 1.01) || ((sy/sx) gt 1.01) then begin
   a=[Imax-min(m.data[u]), min(m.data[u]), xc, yc, sx, sy, 0]
   if n_elements(u) gt n_elements(a) then $
-   q=curvefit([x[u], y[u]], m.data[u], w, a, function_name='Gauss2DrotC', /noderivative, /double, itmax=1000)
+   q=curvefit([x[u], y[u]], m.data[u], w, a, function_name='Gauss2DrotC', /noderivative, /double, itmax=1000, status=st)
  endif else begin
   a=[Imax-min(m.data[u]), min(m.data[u]), xc, yc, sx]
   if n_elements(u) gt n_elements(a) then $
-   q=curvefit([x[u], y[u]], m.data[u], w, a, function_name='Gauss2D', /noderivative, /double, itmax=1000)  
+   q=curvefit([x[u], y[u]], m.data[u], w, a, function_name='Gauss2D', /noderivative, /double, itmax=1000, status=st)  
  endelse 
  
- return, a[0]+a[1]
+ return, (st eq 0) ? a[0]+a[1] : Imax
 end
