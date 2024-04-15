@@ -511,6 +511,8 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
                   IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
                   freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=thr, metric=metric, $
                   noMultiFreq=noMultiFreq
+ forward_function MakeSimulationBox
+
  if ~keyword_set(noMultiFreq) then $
   FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a, b, Qstart, iso, $
                   bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
