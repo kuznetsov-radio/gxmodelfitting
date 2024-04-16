@@ -5,7 +5,7 @@ pro FindMinMetricLocation, mtr_arr, k
  mtrMin=min(mtr_arrX, k, /NaN)
 end  
 
-pro ExpandArrays1, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db
+pro ExpandArrays1, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, a_range, b_range
  FindMinMetricLocation, mtr_arr, k
  if a_arr[k] eq min(a_arr) then begin
   N_a+=1
@@ -86,14 +86,14 @@ pro ExpandArrays1, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da
   Q0_arr=Q0_arrX
  endif   
  
- u=where((abs(a_arr) ge 10.0) or (abs(b_arr) ge 10.0), k)
+ u=where((a_arr le a_range[0]) or (a_arr ge a_range[1]) or (b_arr le b_range[0]) or (b_arr ge b_range[1]), k)
  if k gt 0 then begin
   mtr_arr[u]=!values.d_NaN
   Q0_arr[u]=!values.d_NaN
  endif
 end
 
-pro ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric
+pro ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric, a_range, b_range
  FindMinMetricLocation, mtr_arr, k
  mtr_min=mtr_arr[k]
  u=where(finite(mtr_arr) and (mtr_arr gt 0) and (mtr_arr lt (mtr_min*threshold_metric)))
@@ -186,7 +186,7 @@ pro ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da
   Q0_arr=Q0_arrX
  endif   
  
- u=where((abs(a_arr) ge 10.0) or (abs(b_arr) ge 10.0), k)
+ u=where((a_arr le a_range[0]) or (a_arr ge a_range[1]) or (b_arr le b_range[0]) or (b_arr ge b_range[1]), k)
  if k gt 0 then begin
   mtr_arr[u]=!values.d_NaN
   Q0_arr[u]=!values.d_NaN
@@ -231,7 +231,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                              a_start, b_start, da, db, $
                              Q0start=Q0start, metric=metric, $
                              threshold_img=threshold_img, threshold_metric=threshold_metric, $
-                             MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM
+                             MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, $
+                             a_range=a_range, b_range=b_range
 ;This program searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement 
 ;between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations
 ;comparison metric. 
@@ -305,13 +306,18 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ; ObsFreq - an additional string added to the names of the resulting files.
 ; Default: ''
 ;
-; DEM, DDM - these keywords are only applicable if the chosen EBTELfileName .sav file contains both the DEM and DDM 
-;  tables. 
-;  In this case, if the /DEM keyword is set, the code loads the DEM table only (the DDM table is ignored). 
-;  Similarly, if the /DDM keyword is set, the code loads the DDM table only (the DEM table is ignored). 
-;  If both /DEM and /DDM keywords (or none of them) are set, the code loads both tables.
-;  If the chosen file contains only one EBTEL table (either DEM or DDM), the code loads that table; 
-;  the /DEM and /DDM keywords are ignored.
+; DEM, DDM - these keywords are only applicable if the chosen EBTELfileName .sav file contains both the DEM and DDM tables. 
+; In this case, if the /DEM keyword is set, the code loads the DEM table only (the DDM table is ignored). 
+; Similarly, if the /DDM keyword is set, the code loads the DDM table only (the DEM table is ignored). 
+; If both /DEM and /DDM keywords (or none of them) are set, the code loads both tables.
+; If the chosen file contains only one EBTEL table (either DEM or DDM), the code loads that table; 
+; the /DEM and /DDM keywords are ignored.
+;  
+; a_range, b_range - the allowed ranges of the a and b indices, 2-element arrays. The search for the best fit is
+; performed in the range of a_range[0] < a < a_range[1], b_range[0] < b < b_range[1].
+; Default: a_range=[-10, 10], b_range=[-10, 10].
+; Note that you cannot extend the a and b ranges beyond the default values, due to the limitations related to the
+; file-naming convention.
 ;
 ;Results:
 ; The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency
@@ -385,6 +391,9 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  if exist(ObsDateTime) then ObsDateTime='_'+ObsDateTime else ObsDateTime=''
  
  if exist(ObsFreq) then ObsFreq='_'+ObsFreq else ObsFreq=''
+ 
+ if exist(a_range) then a_range=[a_range[0]>(-10.0), a_range[1]<10.0] else a_range=[-10.0, 10.0]
+ if exist(b_range) then b_range=[b_range[0]>(-10.0), b_range[1]<10.0] else b_range=[-10.0, 10.0]
 
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, ObsInfo.freq)   
  
@@ -420,7 +429,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  done=~finite(mtr_arr)
  
  while ~done do begin
-  ExpandArrays1, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db
+  ExpandArrays1, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, a_range, b_range
   
   FindMinMetricLocation, mtr_arr, k
   idx=array_indices(mtr_arr, k)
@@ -462,7 +471,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  while ~done do begin
   done=1
   
-  ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric
+  ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric, a_range, b_range
   
   FindMinMetricLocation, mtr_arr, k
   mtr_min=mtr_arr[k]
