@@ -4,7 +4,7 @@ The two central routines are:
 
 a) MultiScanAB.pro: it searches for the heating rate value Q0 that provides the best agreement between the model and observed radio maps, for the specified parameters a and b of the coronal heating model. An example of calling the code is presented in the file examples\TestCHMP1.pro.
 
-b) SearchForLocalMinimumAB.pro: it searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations comparison metric. The program also determines the region of "good agreement" in the (a, b) space, where the model-to-observations comparison metric is below a certain threshold (relative to the minimum one). An example of calling the code is presented in the file examples\TestCHMP2.pro.
+b) SearchForLocalMinimumAB.pro: it searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations comparison metric. The program also (optionally) determines the region of "good agreement" in the (a, b) space, where the model-to-observations comparison metric is below a certain threshold (relative to the minimum one). An example of calling the code is presented in the file examples\TestCHMP2.pro.
 
 The data (GX Simulator model, etc.) required to run the examples can be found at https://doi.org/10.5281/zenodo.8403175
 
