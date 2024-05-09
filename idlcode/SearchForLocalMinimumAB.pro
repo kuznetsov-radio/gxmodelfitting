@@ -232,13 +232,14 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                              Q0start=Q0start, metric=metric, $
                              threshold_img=threshold_img, threshold_metric=threshold_metric, $
                              MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, $
-                             a_range=a_range, b_range=b_range
+                             a_range=a_range, b_range=b_range, noArea=noArea
 ;This program searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement 
 ;between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations
 ;comparison metric. 
-;The program also determines the region of "good agreement" in the (a, b) space, where the model-to-observations 
-;comparison metric is below a certain threshold (relative to the minimum one). Potentially, if the metric has 
-;several local minima, this step may alter the best-fit parameters found at the previous step.
+;The program also determines (optionally) the region of "good agreement" in the (a, b) space, 
+;where the model-to-observations comparison metric is below a certain threshold (relative to the minimum one). 
+;Potentially, if the metric has several local minima, this step may alter the best-fit parameters found at the 
+;previous step.
 ;
 ;Input parameters:
 ; RefFileName - name of the .sav file that contains the observed radio maps (at a single frequency).
@@ -318,6 +319,10 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ; Default: a_range=[-10, 10], b_range=[-10, 10].
 ; Note that you cannot extend the a and b ranges beyond the default values, due to the limitations related to the
 ; file-naming convention.
+; 
+; noArea - if set, the area of good agreement (within the threshold_metric threshold) is not computed, i.e., the code
+; stops after finding the local minimum.
+; Default: 0 (the area of good agreement is computed). 
 ;
 ;Results:
 ; The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency
@@ -464,49 +469,51 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
    if ((i ne i0) || (j ne j0)) && finite(mtr_arr[i, j]) && (mtr_arr[i, j] lt mtr_arr[i0, j0]) then done=0 
  endwhile
  
- print, 'Exploring the area within the threshold'
+ if ~keyword_set(noArea) then begin
+  print, 'Exploring the area within the threshold'
  
- done=0
+  done=0
  
- while ~done do begin
-  done=1
+  while ~done do begin
+   done=1
   
-  ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric, a_range, b_range
+   ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric, a_range, b_range
   
-  FindMinMetricLocation, mtr_arr, k
-  mtr_min=mtr_arr[k]
-  u=where(finite(mtr_arr) and (mtr_arr gt 0) and (mtr_arr lt (mtr_min*threshold_metric)), n)
+   FindMinMetricLocation, mtr_arr, k
+   mtr_min=mtr_arr[k]
+   u=where(finite(mtr_arr) and (mtr_arr gt 0) and (mtr_arr lt (mtr_min*threshold_metric)), n)
   
-  for l=0, n-1 do begin
-   idx=array_indices(mtr_arr, u[l])
-   i0=idx[0]
-   j0=idx[1]
+   for l=0, n-1 do begin
+    idx=array_indices(mtr_arr, u[l])
+    i0=idx[0]
+    j0=idx[1]
    
-   for i=i0-1, i0+1 do for j=j0-1, j0+1 do if finite(mtr_arr[i, j]) && (mtr_arr[i, j] lt 0) then begin
-    if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
-                         bestQarr, chiArr, rhoArr, etaArr) then begin
-     FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
-                   a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], iso, $
-                   bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                   IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                   freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
-     SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
-                       bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                       modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-                       freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
-    endif                                 
+    for i=i0-1, i0+1 do for j=j0-1, j0+1 do if finite(mtr_arr[i, j]) && (mtr_arr[i, j] lt 0) then begin
+     if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
+                          bestQarr, chiArr, rhoArr, etaArr) then begin
+      FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
+                    a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], iso, $
+                    bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+                    IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
+                    freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
+      SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
+                        bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
+                        modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
+                        freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
+     endif                                 
 
-    case metric of                      
-     'chi': mtr_arr[i, j]=reform(chiArr)
-     'rho': mtr_arr[i, j]=reform(rhoArr)    
-     'eta': mtr_arr[i, j]=reform(etaArr)
-    endcase
+     case metric of                      
+      'chi': mtr_arr[i, j]=reform(chiArr)
+      'rho': mtr_arr[i, j]=reform(rhoArr)    
+      'eta': mtr_arr[i, j]=reform(etaArr)
+     endcase
     
-    Q0_arr[i, j]=reform(bestQarr)
-    done=0
-   endif
-  endfor
- endwhile
+     Q0_arr[i, j]=reform(bestQarr)
+     done=0
+    endif
+   endfor
+  endwhile
+ endif 
  
  print, 'Creating the summary file'
  
