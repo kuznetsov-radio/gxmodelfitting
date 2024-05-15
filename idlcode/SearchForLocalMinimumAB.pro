@@ -393,9 +393,9 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  if ~exist(MultiThermal) then iso=1 else iso=MultiThermal eq 0
 
  ObsID=exist(ObsDateTime) ? ObsDateTime : ''
- if exist(ObsDateTime) then ObsDateTime='_'+ObsDateTime else ObsDateTime=''
+ if exist(ObsDateTime) then ObsDateTime1='_'+ObsDateTime else ObsDateTime1=''
  
- if exist(ObsFreq) then ObsFreq='_'+ObsFreq else ObsFreq=''
+ if exist(ObsFreq) then ObsFreq1='_'+ObsFreq else ObsFreq1=''
  
  if exist(a_range) then a_range=[a_range[0]>(-10.0), a_range[1]<10.0] else a_range=[-10.0, 10.0]
  if exist(b_range) then b_range=[b_range[0]>(-10.0), b_range[1]<10.0] else b_range=[-10.0, 10.0]
@@ -411,13 +411,13 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  N_a=1
  N_b=1
  
- if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_start, b_start, $
+ if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_start, b_start, $
                       bestQarr, chiArr, rhoArr, etaArr) then begin
   FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a_start, b_start, Q0start, iso, $
                 bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                 IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
                 freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
-  SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_start, b_start, $
+  SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_start, b_start, $
                     bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                     modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
                     freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
@@ -442,14 +442,14 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   j0=idx[1]
   
   for i=i0-1, i0+1 do for j=j0-1, j0+1 do if finite(mtr_arr[i, j]) && (mtr_arr[i, j] lt 0) then begin
-   if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
+   if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_arr[i, j], b_arr[i, j], $
                         bestQarr, chiArr, rhoArr, etaArr) then begin
     FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                   a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], iso, $
                   bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                   IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
                   freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
-    SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
+    SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_arr[i, j], b_arr[i, j], $
                       bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                       modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
                       freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
@@ -489,14 +489,14 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
     j0=idx[1]
    
     for i=i0-1, i0+1 do for j=j0-1, j0+1 do if finite(mtr_arr[i, j]) && (mtr_arr[i, j] lt 0) then begin
-     if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
+     if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_arr[i, j], b_arr[i, j], $
                           bestQarr, chiArr, rhoArr, etaArr) then begin
       FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                     a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], iso, $
                     bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                     IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
                     freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
-      SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime, ObsFreq, a_arr[i, j], b_arr[i, j], $
+      SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_arr[i, j], b_arr[i, j], $
                         bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                         modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
                         freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
@@ -565,7 +565,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
    CC[i, j, *]=!values.d_NaN 
   endif else begin 
    fname=OutDir+'fit_'+metric+'_thr'+string(threshold_img, format='(F5.3)')+$
-         (iso ? '_I' : '_M')+ObsDateTime+ObsFreq+$
+         (iso ? '_I' : '_M')+ObsDateTime1+ObsFreq1+$
          '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav'
   
    if file_exist(fname) then begin
@@ -604,7 +604,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  endfor 
  
  fname1=OutDir+'Summary_'+metric+'_thr'+string(threshold_img, format='(F5.3)')+$
-        (iso ? '_I': '_M')+ObsDateTime+ObsFreq+'.sav'
+        (iso ? '_I': '_M')+ObsDateTime1+ObsFreq1+'.sav'
  
  save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, rho, rhoVar, eta, etaVar, $
        modelFileName, EBTELfileName, ObsID, shiftX, shiftY, filename=fname1
