@@ -207,6 +207,13 @@ pro SaveLocalResults, OutDir, metric, threshold, iso, ObsDateTime, ObsFreq, a, b
        filename=fname, /compress
 end 
 
+function InSav, o, name
+ s=o->Names()
+ res=0
+ for i=0, n_elements(s)-1 do if strcmp(s[i], name, /fold_case) then res=1
+ return, res
+end
+
 function LoadLocalResults, OutDir, metric, threshold, iso, ObsDateTime, ObsFreq, a, b, $
          bestQarr, chiArr, rhoArr, etaArr
  fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
@@ -216,9 +223,9 @@ function LoadLocalResults, OutDir, metric, threshold, iso, ObsDateTime, ObsFreq,
  if file_exist(fname) then begin
   o=obj_new('IDL_Savefile', fname)
   o->restore, 'bestQarr'
-  o->restore, 'chiArr'
-  o->restore, 'rhoArr'
-  o->restore, 'etaArr' 
+  if InSav(o, 'chiArr') then o->restore, 'chiArr' else chiArr=dblarr(n_elements(bestQarr))
+  if InSav(o, 'rhoArr') then o->restore, 'rhoArr' else rhoArr=dblarr(n_elements(bestQarr))
+  if InSav(o, 'etaArr') then o->restore, 'etaArr' else etaArr=dblarr(n_elements(bestQarr))
   obj_destroy, o
   res=1
  endif else res=0   
@@ -397,8 +404,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  
  if exist(ObsFreq) then ObsFreq1='_'+ObsFreq else ObsFreq1=''
  
- if exist(a_range) then a_range=[a_range[0]>(-10.0), a_range[1]<10.0] else a_range=[-10.0, 10.0]
- if exist(b_range) then b_range=[b_range[0]>(-10.0), b_range[1]<10.0] else b_range=[-10.0, 10.0]
+ if exist(a_range) then a_range=[a_range[0]>(-9.999), a_range[1]<9.999] else a_range=[-9.999, 9.999]
+ if exist(b_range) then b_range=[b_range[0]>(-9.999), b_range[1]<9.999] else b_range=[-9.999, 9.999]
 
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, ObsInfo.freq)   
  
@@ -552,7 +559,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   a=a_arr1D[i]
   b=b_arr1D[j]
   
-  if (abs(a) ge 10.0) || (abs(b) ge 10.0) then begin
+  if (a le a_range[0]) || (a ge a_range[1]) || (b le b_range[0]) || (b ge b_range[1]) then begin
    chi[i, j, *]=!values.d_NaN 
    chiVar[i, j, *]=!values.d_NaN
    rho[i, j, *]=!values.d_NaN 
@@ -570,12 +577,12 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   
    if file_exist(fname) then begin
     o=obj_new('IDL_Savefile', fname)
-    o->restore, 'chiArr'
-    o->restore, 'chiVarArr'
-    o->restore, 'rhoArr'
-    o->restore, 'rhoVarArr'        
-    o->restore, 'etaArr'
-    o->restore, 'etaVarArr'
+    if InSav(o, 'chiArr') then o->restore, 'chiArr' else chiArr=dblarr(N_freq)
+    if InSav(o, 'chiVarArr') then o->restore, 'chiVarArr' else chiVarArr=dblarr(N_freq)
+    if InSav(o, 'rhoArr') then o->restore, 'rhoArr' else rhoArr=dblarr(N_freq)
+    if InSav(o, 'rhoVarArr') then o->restore, 'rhoVarArr' else rhoVarArr=dblarr(N_freq)
+    if InSav(o, 'etaArr') then o->restore, 'etaArr' else etaArr=dblarr(N_freq)
+    if InSav(o, 'etaVarArr') then o->restore, 'etaVarArr' else etaVarArr=dblarr(N_freq)            
     o->restore, 'bestQarr'
     o->restore, 'IobsArr'
     o->restore, 'ImodArr'

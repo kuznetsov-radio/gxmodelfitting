@@ -1,4 +1,4 @@
-function CheckSummary, OutDir, a_min, b_min, $
+function CheckSummary, OutDir, a_min, b_min, Q0, $
                        metric=metric, threshold_img=threshold_img, MultiThermal=MultiThermal, $
                        ObsDateTime=ObsDateTime, ObsFreq=ObsFreq
  if ~exist(threshold_img) then threshold_img=0.1d0
@@ -33,10 +33,11 @@ function CheckSummary, OutDir, a_min, b_min, $
    mmin=mtr[i, j]
    a_min=alist[i]
    b_min=blist[j]
+   Q0=bestQ[i, j]
   endif
   
   print, '... found'
-  print, 'Minimum metric: ', mmin, ' at a=', a_min, ', b=', b_min
+  print, 'Minimum metric: ', mmin, ' at a=', a_min, ', b=', b_min, ' Q0=', Q0
   return, 1
  endif else begin
   print, '... not found'
