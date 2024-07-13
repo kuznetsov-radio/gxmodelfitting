@@ -287,7 +287,8 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     nmin=0
     for i=1, n_elements(Qgrid)-2 do if (mtr[i, j] lt mtr[i-1, j]) && (mtr[i, j] lt mtr[i+1, j]) then nmin+=1
     if nmin ne 1 then begin
-     if exist(loud) then print, '*** More than one local minimum at ', freqList[j], ' GHz ***'
+     if exist(loud) then print, (nmin gt 1) ? '*** More than one local minimum at ' : $
+                                              '*** No local minima at ', freqList[j], ' GHz ***'
      badf[j]=1
     endif
    endelse 
