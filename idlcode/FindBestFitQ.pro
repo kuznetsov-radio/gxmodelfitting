@@ -1,7 +1,8 @@
 pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a, b, Qstart, iso, $
                     bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                     IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                    freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=thr, metric=metric
+                    freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=thr, metric=metric, $
+                    Qstep=Qstep, loud=loud
  forward_function GetSmoothedMax, DefineCoronaParms, ReserveOutputSpace, ConvertToMaps
                        
  if ~exist(thr) then thr=0.1d0 ;default map threshold
@@ -57,6 +58,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
  CCarr[*]=!values.d_NaN 
  
  G=(1d0+sqrt(5d0))/2
+ if ~exist(Qstep) then Qstep=G
  
  ;---------------------------------------------------------
  
@@ -123,6 +125,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     etaVar[i, j]=variance((modI.data[u]-obsI.data[u])/mean(obsI.data[u])) ;\eta^2 corrected
     
     if (maskMod gt 0.99) || ((maskMod/maskObs) gt 4) then begin
+     if exist(loud) then print, '*** GR contribution is too low at ', freqList[j], ' GHz ***'
      chi[i, j]=!values.d_NaN
      chiVar[i, j]=!values.d_NaN
      rho[i, j]=!values.d_NaN
@@ -160,8 +163,14 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     endif
    endfor
    
-   if (1d0*flags[0, 5]/flags[0, 2]) gt 0.1 then lmins=0
-   if (1d0*flags[NQ-1, 5]/flags[NQ-1, 2]) gt 0.1 then rmins=0
+   if (1d0*flags[0, 5]/flags[0, 2]) gt 0.1 then begin
+    if exist(loud) then print, '*** Out of EBTEL table at left boundary, Q0=', Qgrid[0], ' ***'
+    lmins=0
+   endif
+   if (1d0*flags[NQ-1, 5]/flags[NQ-1, 2]) gt 0.1 then begin
+    if exist(loud) then print, '*** Out of EBTEL table at right boundary, Q0=', Qgrid[NQ-1], ' ***'
+    rmins=0
+   endif
    
    if (lmins eq 0) && (rmins eq 0) then aw=0 else begin
     aw=rmins-lmins
@@ -170,7 +179,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
   endelse
   
   if aw lt 0 then begin
-   Qgrid=[min(Qgrid)/G, Qgrid]
+   Qgrid=[min(Qgrid)/Qstep, Qgrid]
    fdone=[0, fdone]
    modImages=[obj_new(), modImages]
    modImagesConv=[obj_new(), modImagesConv]
@@ -216,7 +225,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
    CC2[1 : NQ, *]=CC
    CC=CC2      
   endif else if aw gt 0 then begin
-   Qgrid=[Qgrid, max(Qgrid)*G]
+   Qgrid=[Qgrid, max(Qgrid)*Qstep]
    fdone=[fdone, 0]
    modImages=[modImages, obj_new()]
    modImagesConv=[modImagesConv, obj_new()]
@@ -277,7 +286,10 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
    if (k eq 0) || (k eq (n_elements(Qgrid)-1)) then badf[j]=1 else begin
     nmin=0
     for i=1, n_elements(Qgrid)-2 do if (mtr[i, j] lt mtr[i-1, j]) && (mtr[i, j] lt mtr[i+1, j]) then nmin+=1
-    if nmin ne 1 then badf[j]=1
+    if nmin ne 1 then begin
+     if exist(loud) then print, '*** More than one local minimum at ', freqList[j], ' GHz ***'
+     badf[j]=1
+    endif
    endelse 
   endelse
  endfor
@@ -510,14 +522,15 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
                   bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                   IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
                   freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=thr, metric=metric, $
-                  noMultiFreq=noMultiFreq
+                  noMultiFreq=noMultiFreq, Qstep=Qstep, loud=loud
  forward_function MakeSimulationBox
 
  if ~keyword_set(noMultiFreq) then $
   FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a, b, Qstart, iso, $
                   bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                   IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                  freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=thr, metric=metric $
+                  freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=thr, metric=metric, $
+                  Qstep=Qstep, loud=loud $
  else begin
   Nfreq=obsInfo.Nfreq
   
@@ -554,7 +567,8 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
    FindBestFitQmf, libname, model, ebtel, simbox_loc, obsImaps_loc, obsSImaps_loc, obsInfo_loc, a, b, Qstart, iso, $
                    bestQarr_loc, chiArr_loc, chiVarArr_loc, rhoArr_loc, rhoVarArr_loc, etaArr_loc, etaVarArr_loc, $
                    IobsArr_loc, ImodArr_loc, CCarr_loc, modImageArr_loc, modFlagArr_loc, $
-                   freqList_loc, allQ_loc, allMetrics_loc, modImageConvArr_loc, obsImageArr_loc, thr=thr, metric=metric
+                   freqList_loc, allQ_loc, allMetrics_loc, modImageConvArr_loc, obsImageArr_loc, thr=thr, $
+                   metric=metric, Qstep=Qstep, loud=loud
                    
    bestQarr[i]=bestQarr_loc
    chiArr[i]=chiArr_loc

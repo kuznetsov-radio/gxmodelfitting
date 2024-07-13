@@ -239,7 +239,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                              Q0start=Q0start, metric=metric, $
                              threshold_img=threshold_img, threshold_metric=threshold_metric, $
                              MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, $
-                             a_range=a_range, b_range=b_range, noArea=noArea
+                             a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, loud=loud
 ;This program searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement 
 ;between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations
 ;comparison metric. 
@@ -423,7 +423,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a_start, b_start, Q0start, iso, $
                 bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                 IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
+                freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric, $
+                Qstep=Qstep, loud=loud
   SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_start, b_start, $
                     bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                     modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
@@ -455,7 +456,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                   a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], iso, $
                   bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                   IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                  freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
+                  freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric, $
+                  Qstep=Qstep, loud=loud
     SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_arr[i, j], b_arr[i, j], $
                       bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                       modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
@@ -502,7 +504,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                     a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], iso, $
                     bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                     IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                    freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric
+                    freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric, $
+                    Qstep=Qstep, loud=loud
       SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_arr[i, j], b_arr[i, j], $
                         bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                         modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $

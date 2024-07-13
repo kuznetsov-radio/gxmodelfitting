@@ -1,7 +1,8 @@
 pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  alist, blist, xc, yc, dx, dy, Nx, Ny, $
                  RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, $
-                 MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM
+                 MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM, $
+                 Qstep=Qstep, loud=loud
 ;This program searches for the heating rate value Q0 that provides the best agreement between the model and
 ;observed radio maps, for the specified parameters a and b of the coronal heating model.
 ;
@@ -176,7 +177,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
                  IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
                  freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold, metric=metric, $
-                 noMultiFreq=noMultiFreq
+                 noMultiFreq=noMultiFreq, Qstep=Qstep, loud=loud
          
    save, a, b, bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
          modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
