@@ -39,6 +39,7 @@ function GetSmoothedMax, m, sx, sy
  y=get_map_yp(m, /oned)
  
  Imax=0d0
+ st=0
  for i=0, n_elements(x)-1 do for j=0, n_elements(y)-1 do if m.data[i, j] gt Imax then begin
   Imax=m.data[i, j]
   xc=x[i]
