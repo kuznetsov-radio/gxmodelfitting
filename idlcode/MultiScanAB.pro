@@ -161,6 +161,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  endelse
  
  if ~exist(threshold) then threshold=0.1d0
+ threshold_img=threshold
  
  if ~exist(metric) then metric='eta'
  if (metric ne 'eta') && (metric ne 'chi') && (metric ne 'rho') then metric='eta'
@@ -186,7 +187,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   
   print, 'Computing the best fit Q for a=', a, ', b=', b
   
-  fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
+  fname=OutDir+'fit_'+metric+'_thr'+string(threshold_img, format='(F5.3)')+$
         (iso ? '_I' : '_M')+ObsDateTime+$
         '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav' 
   
@@ -194,7 +195,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
    tstart1=systime(1)
    
    FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ 
-                 a, b, Qstart, Qstep, iso, threshold, metric, MultiFreq_on, $         
+                 a, b, Qstart, Qstep, iso, threshold_img, metric, MultiFreq_on, $         
                  freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                  ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                  obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
@@ -202,7 +203,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
          
    save, LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
          sxArr, syArr, beamArr, $
-         a, b, Qstart, Qstep, iso, threshold, metric, MultiFreq_on, $
+         a, b, Qstart, Qstep, iso, threshold_img, metric, MultiFreq_on, $
          freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ 
          ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
          obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
@@ -233,7 +234,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   a=alist[i]
   b=blist[j]
   
-  fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
+  fname=OutDir+'fit_'+metric+'_thr'+string(threshold_img, format='(F5.3)')+$
         (iso ? '_I': '_M')+ObsDateTime+$
         '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav' 
   o=obj_new('IDL_Savefile', fname)
@@ -262,10 +263,10 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   endfor
  endfor 
  
- fname1=OutDir+'Summary_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
+ fname1=OutDir+'Summary_'+metric+'_thr'+string(threshold_img, format='(F5.3)')+$
         (iso ? '_I': '_M')+ObsDateTime+'.sav'
  
- save, alist, blist, freqList, bestQ, ItotalObs, ItotalMod, CC, chi, rho, eta, metric, iso, threshold, $
+ save, alist, blist, freqList, bestQ, ItotalObs, ItotalMod, CC, chi, rho, eta, metric, iso, threshold_img, $
        modelFileName, EBTELfileName, DEM_on, DDM_on, MultiFreq_on, ObsID, shiftX, shiftY, filename=fname1
  
  print, 'Done'
