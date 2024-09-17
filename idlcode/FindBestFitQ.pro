@@ -1,13 +1,12 @@
-pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a, b, Qstart, iso, $
-                    bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                    IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                    freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=thr, metric=metric, $
-                    Qstep=Qstep, loud=loud
+pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ ;input
+                    a, b, Qstart, Qstep, iso, thr, metric, $                       ;input
+                    freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $           ;output
+                    ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ ;output
+                    obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ ;output
+                    modFlagArr, allQ, allMetrics, $ ;extra output
+                    loud=loud
  forward_function GetSmoothedMax, DefineCoronaParms, ReserveOutputSpace, ConvertToMaps
                        
- if ~exist(thr) then thr=0.1d0 ;default map threshold
- if ~exist(metric) then metric='eta' ;default metric to use
- 
  acc=1d-2 ;desired accuracy
  Tbase=1d6 ;analytical corona temperature
  nbase=1d8 ;analytical corona base density
@@ -20,45 +19,47 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
  modImages=objarr(1)
  modImagesConv=objarr(1)
  obsImages=objarr(1)
+ obsImagesSigma=objarr(1)
  flags=lonarr(1, 6)
  chi=dblarr(1, Nfreq)
- chiVar=dblarr(1, Nfreq)
  rho=dblarr(1, Nfreq)
- rhoVar=dblarr(1, Nfreq)
- eta=dblarr(1, Nfreq)
- etaVar=dblarr(1, Nfreq)  
- Iobs=dblarr(1, Nfreq)
- Imod=dblarr(1, Nfreq)
+ eta=dblarr(1, Nfreq)  
+ ItotalObs=dblarr(1, Nfreq)
+ ItotalMod=dblarr(1, Nfreq)
+ ImaxObs=dblarr(1, Nfreq)
+ ImaxMod=dblarr(1, Nfreq)
+ IthrObs=dblarr(1, Nfreq)
+ IthrMod=dblarr(1, Nfreq) 
  CC=dblarr(1, Nfreq)
  
  bestQarr=dblarr(Nfreq)
  chiArr=dblarr(Nfreq)
- chiVarArr=dblarr(Nfreq)
  rhoArr=dblarr(Nfreq)
- rhoVarArr=dblarr(Nfreq) 
  etaArr=dblarr(Nfreq)
- etaVarArr=dblarr(Nfreq)  
- IobsArr=dblarr(Nfreq)
- ImodArr=dblarr(Nfreq)
+ ItotalObsArr=dblarr(Nfreq)
+ ItotalModArr=dblarr(Nfreq)
+ ImaxObsArr=dblarr(Nfreq)
+ ImaxModArr=dblarr(Nfreq)
+ IthrObsArr=dblarr(Nfreq)
+ IthrModArr=dblarr(Nfreq)  
  CCarr=dblarr(Nfreq) 
  modImageArr=obj_new('map')
  modImageConvArr=obj_new('map')
  obsImageArr=obj_new('map')
+ obsImageSigmaArr=obj_new('map')
  modFlagArr=lonarr(Nfreq, 6)
  
  bestQarr[*]=!values.d_NaN
  chiArr[*]=!values.d_NaN
- chiVarArr[*]=!values.d_NaN
  rhoArr[*]=!values.d_NaN
- rhoVarArr[*]=!values.d_NaN
  etaArr[*]=!values.d_NaN
- etaVarArr[*]=!values.d_NaN  
- IobsArr[*]=!values.d_NaN
- ImodArr[*]=!values.d_NaN
+ ItotalObsArr[*]=!values.d_NaN
+ ItotalModArr[*]=!values.d_NaN
+ ImaxObsArr[*]=!values.d_NaN
+ ImaxModArr[*]=!values.d_NaN
+ IthrObsArr[*]=!values.d_NaN
+ IthrModArr[*]=!values.d_NaN  
  CCarr[*]=!values.d_NaN 
- 
- G=(1d0+sqrt(5d0))/2
- if ~exist(Qstep) then Qstep=G
  
  ;---------------------------------------------------------
  
@@ -84,6 +85,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
    
    modX=obj_new('map')
    obsX=obj_new('map')
+   obsSX=obj_new('map')
    
    for j=0, Nfreq-1 do begin
     modI=modImaps.getmap(j)
@@ -102,9 +104,14 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
                        obsI)
     ExtractSubmap, _obsSigma, modI, dx, dy, _obsI.id+' sigma', obsSigma
     obsX->setmap, j, obsI
+    obsSX->setmap, j, obsSigma
     
     obsMax=GetSmoothedMax(obsI, obsInfo.sx[j], obsInfo.sy[j])
     modMax=max(modI.data)    
+    ImaxObs[i, j]=obsMax
+    ImaxMod[i, j]=modMax
+    IthrObs[i, j]=obsMax*thr
+    IthrMod[i, j]=modMax*thr
     
     u=where(obsI.data gt (obsMax*thr), ms)
     maskObs=1d0*ms/n_elements(obsI.data)
@@ -113,25 +120,19 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     maskMod=1d0*ms/n_elements(modI.data)    
     
     u=where((obsI.data gt (obsMax*thr)) or (modI.data gt (modMax*thr)), ms)
-    Iobs[i, j]=total(obsI.data[u])*obsI.dx*obsI.dy
-    Imod[i, j]=total(modI.data[u])*modI.dx*modI.dy
+    ItotalObs[i, j]=total(obsI.data[u])*obsI.dx*obsI.dy
+    ItotalMod[i, j]=total(modI.data[u])*modI.dx*modI.dy
     CC[i, j]=c_correlate(obsI.data[u], modI.data[u], 0)
     
     chi[i, j]=mean(((modI.data[u]-obsI.data[u])/obsSigma.data[u])^2)    ;\chi^2
-    chiVar[i, j]=variance((modI.data[u]-obsI.data[u])/obsSigma.data[u]) ;\chi^2 corrected
     rho[i, j]=mean((modI.data[u]/obsI.data[u]-1)^2)    ;\rho^2
-    rhoVar[i, j]=variance(modI.data[u]/obsI.data[u]-1) ;\rho^2 corrected    
     eta[i, j]=mean(((modI.data[u]-obsI.data[u])/mean(obsI.data[u]))^2)    ;\eta^2
-    etaVar[i, j]=variance((modI.data[u]-obsI.data[u])/mean(obsI.data[u])) ;\eta^2 corrected
-    
+        
     if (maskMod gt 0.99) || ((maskMod/maskObs) gt 4) then begin
      if exist(loud) then print, '*** GR contribution is too low at ', freqList[j], ' GHz ***'
      chi[i, j]=!values.d_NaN
-     chiVar[i, j]=!values.d_NaN
      rho[i, j]=!values.d_NaN
-     rhoVar[i, j]=!values.d_NaN
      eta[i, j]=!values.d_NaN
-     etaVar[i, j]=!values.d_NaN          
     endif
    endfor
    
@@ -143,12 +144,13 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
    
    modImagesConv[i]=modX
    obsImages[i]=obsX
+   obsImagesSigma[i]=obsSX
  
    fdone[i]=1
   endif
   
   if NQ eq 1 then begin
-   aw=total(sgn(Iobs-Imod))
+   aw=total(sgn(ItotalObs-ItotalMod))
    if aw eq 0 then aw=1 
   endif else begin
    lmins=0
@@ -184,6 +186,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
    modImages=[obj_new(), modImages]
    modImagesConv=[obj_new(), modImagesConv]
    obsImages=[obj_new(), obsImages]
+   obsImagesSigma=[obj_new(), obsImagesSigma]
       
    flags2=lonarr(NQ+1, 6)
    flags2[1 : NQ, *]=flags
@@ -193,33 +196,37 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
    chi2[1 : NQ, *]=chi
    chi=chi2
    
-   chiVar2=dblarr(NQ+1, Nfreq)
-   chiVar2[1 : NQ, *]=chiVar
-   chiVar=chiVar2   
-   
    rho2=dblarr(NQ+1, Nfreq)
    rho2[1 : NQ, *]=rho
    rho=rho2
-   
-   rhoVar2=dblarr(NQ+1, Nfreq)
-   rhoVar2[1 : NQ, *]=rhoVar
-   rhoVar=rhoVar2
    
    eta2=dblarr(NQ+1, Nfreq)
    eta2[1 : NQ, *]=eta
    eta=eta2
    
-   etaVar2=dblarr(NQ+1, Nfreq)
-   etaVar2[1 : NQ, *]=etaVar
-   etaVar=etaVar2            
-      
-   Iobs2=dblarr(NQ+1, Nfreq)
-   Iobs2[1 : NQ, *]=Iobs
-   Iobs=Iobs2
+   ItotalObs2=dblarr(NQ+1, Nfreq)
+   ItotalObs2[1 : NQ, *]=ItotalObs
+   ItotalObs=ItotalObs2
    
-   Imod2=dblarr(NQ+1, Nfreq)
-   Imod2[1 : NQ, *]=Imod
-   Imod=Imod2
+   ItotalMod2=dblarr(NQ+1, Nfreq)
+   ItotalMod2[1 : NQ, *]=ItotalMod
+   ItotalMod=ItotalMod2
+   
+   ImaxObs2=dblarr(NQ+1, Nfreq)
+   ImaxObs2[1 : NQ, *]=ImaxObs
+   ImaxObs=ImaxObs2
+   
+   ImaxMod2=dblarr(NQ+1, Nfreq)
+   ImaxMod2[1 : NQ, *]=ImaxMod
+   ImaxMod=ImaxMod2   
+
+   IthrObs2=dblarr(NQ+1, Nfreq)
+   IthrObs2[1 : NQ, *]=IthrObs
+   IthrObs=IthrObs2
+   
+   IthrMod2=dblarr(NQ+1, Nfreq)
+   IthrMod2[1 : NQ, *]=IthrMod
+   IthrMod=IthrMod2
    
    CC2=dblarr(NQ+1, Nfreq)
    CC2[1 : NQ, *]=CC
@@ -230,6 +237,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
    modImages=[modImages, obj_new()]
    modImagesConv=[modImagesConv, obj_new()]
    obsImages=[obsImages, obj_new()]
+   obsImagesSigma=[obsImagesSigma, obj_new()]
    
    flags2=lonarr(NQ+1, 6)
    flags2[0 : NQ-1, *]=flags
@@ -239,33 +247,37 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
    chi2[0 : NQ-1, *]=chi
    chi=chi2
    
-   chiVar2=dblarr(NQ+1, Nfreq)
-   chiVar2[0 : NQ-1, *]=chiVar
-   chiVar=chiVar2   
-   
    rho2=dblarr(NQ+1, Nfreq)
    rho2[0 : NQ-1, *]=rho
    rho=rho2
-   
-   rhoVar2=dblarr(NQ+1, Nfreq)
-   rhoVar2[0 : NQ-1, *]=rhoVar
-   rhoVar=rhoVar2      
    
    eta2=dblarr(NQ+1, Nfreq)
    eta2[0 : NQ-1, *]=eta
    eta=eta2
    
-   etaVar2=dblarr(NQ+1, Nfreq)
-   etaVar2[0 : NQ-1, *]=etaVar
-   etaVar=etaVar2      
+   ItotalObs2=dblarr(NQ+1, Nfreq)
+   ItotalObs2[0 : NQ-1, *]=ItotalObs
+   ItotalObs=ItotalObs2   
    
-   Iobs2=dblarr(NQ+1, Nfreq)
-   Iobs2[0 : NQ-1, *]=Iobs
-   Iobs=Iobs2   
+   ItotalMod2=dblarr(NQ+1, Nfreq)
+   ItotalMod2[0 : NQ-1, *]=ItotalMod
+   ItotalMod=ItotalMod2
    
-   Imod2=dblarr(NQ+1, Nfreq)
-   Imod2[0 : NQ-1, *]=Imod
-   Imod=Imod2      
+   ImaxObs2=dblarr(NQ+1, Nfreq)
+   ImaxObs2[0 : NQ-1, *]=ImaxObs
+   ImaxObs=ImaxObs2   
+   
+   ImaxMod2=dblarr(NQ+1, Nfreq)
+   ImaxMod2[0 : NQ-1, *]=ImaxMod
+   ImaxMod=ImaxMod2            
+
+   IthrObs2=dblarr(NQ+1, Nfreq)
+   IthrObs2[0 : NQ-1, *]=IthrObs
+   IthrObs=IthrObs2   
+   
+   IthrMod2=dblarr(NQ+1, Nfreq)
+   IthrMod2[0 : NQ-1, *]=IthrMod
+   IthrMod=IthrMod2   
    
    CC2=dblarr(NQ+1, Nfreq)
    CC2[0 : NQ-1, *]=CC
@@ -274,6 +286,8 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
  endwhile
  
  ;-----------------------------------------------------------------
+ 
+ G=(1d0+sqrt(5d0))/2
  
  badf=intarr(Nfreq)
  
@@ -358,17 +372,19 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     obj_destroy, modVmaps
     
     chi_x=dblarr(Nfreq)
-    chiVar_x=dblarr(Nfreq)
     rho_x=dblarr(Nfreq)
-    rhoVar_x=dblarr(Nfreq)
     eta_x=dblarr(Nfreq)
-    etaVar_x=dblarr(Nfreq)        
-    Iobs_x=dblarr(Nfreq)
-    Imod_x=dblarr(Nfreq)
+    ItotalObs_x=dblarr(Nfreq)
+    ItotalMod_x=dblarr(Nfreq)
+    ImaxObs_x=dblarr(Nfreq)
+    ImaxMod_x=dblarr(Nfreq)
+    IthrObs_x=dblarr(Nfreq)
+    IthrMod_x=dblarr(Nfreq)        
     CC_x=dblarr(Nfreq)
     
     modX=obj_new('map')
     obsX=obj_new('map')
+    obsSX=obj_new('map')
     
     for k=0, Nfreq-1 do begin
      modI=modImaps.getmap(k)
@@ -387,21 +403,23 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
                         obsI)
      ExtractSubmap, _obsSigma, modI, dx, dy, _obsI.id+' sigma', obsSigma
      obsX->setmap, k, obsI
+     obsSX->setmap, k, obsSigma
     
      obsMax=GetSmoothedMax(obsI, obsInfo.sx[k], obsInfo.sy[k])
      modMax=max(modI.data)    
+     ImaxObs_x[k]=obsMax
+     ImaxMod_x[k]=modMax
+     IthrObs_x[k]=obsMax*thr
+     IthrMod_x[k]=modMax*thr
     
      u=where((obsI.data gt (obsMax*thr)) or (modI.data gt (modMax*thr)), ms)
-     Iobs_x[k]=total(obsI.data[u])*obsI.dx*obsI.dy
-     Imod_x[k]=total(modI.data[u])*modI.dx*modI.dy
+     ItotalObs_x[k]=total(obsI.data[u])*obsI.dx*obsI.dy
+     ItotalMod_x[k]=total(modI.data[u])*modI.dx*modI.dy
      CC_x[k]=c_correlate(obsI.data[u], modI.data[u], 0)
           
      chi_x[k]=mean(((modI.data[u]-obsI.data[u])/obsSigma.data[u])^2)    ;\chi^2
-     chiVar_x[k]=variance((modI.data[u]-obsI.data[u])/obsSigma.data[u]) ;\chi^2 corrected
      eta_x[k]=mean(((modI.data[u]-obsI.data[u])/mean(obsI.data[u]))^2)    ;\eta^2
-     etaVar_x[k]=variance((modI.data[u]-obsI.data[u])/mean(obsI.data[u])) ;\eta^2 corrected
      rho_x[k]=mean((modI.data[u]/obsI.data[u]-1)^2)    ;\rho^2
-     rhoVar_x[k]=variance(modI.data[u]/obsI.data[u]-1) ;\rho^2 corrected  
     endfor 
     
     l=(Qx gt Qb) ? ib : ib-1
@@ -410,6 +428,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     modImages=[modImages[0 : l], modImaps, modImages[l+1 : NQ-1]]
     modImagesConv=[modImagesConv[0 : l], modX, modImagesConv[l+1 : NQ-1]]
     obsImages=[obsImages[0 : l], obsX, obsImages[l+1 : NQ-1]]
+    obsImagesSigma=[obsImagesSigma[0 : l], obsSX, obsImagesSigma[l+1 : NQ-1]]
     
     flags2=lonarr(NQ+1, 6)
     flags2[0 : l, *]=flags[0 : l, *]
@@ -423,23 +442,11 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     chi2[l+2 : NQ, *]=chi[l+1 : NQ-1, *]
     chi=chi2
     
-    chiVar2=dblarr(NQ+1, Nfreq)
-    chiVar2[0 : l, *]=chiVar[0 : l, *]
-    chiVar2[l+1, *]=chiVar_x
-    chiVar2[l+2 : NQ, *]=chiVar[l+1 : NQ-1, *]
-    chiVar=chiVar2    
-    
     rho2=dblarr(NQ+1, Nfreq)
     rho2[0 : l, *]=rho[0 : l, *]
     rho2[l+1, *]=rho_x
     rho2[l+2 : NQ, *]=rho[l+1 : NQ-1, *]
     rho=rho2
-    
-    rhoVar2=dblarr(NQ+1, Nfreq)
-    rhoVar2[0 : l, *]=rhoVar[0 : l, *]
-    rhoVar2[l+1, *]=rhoVar_x
-    rhoVar2[l+2 : NQ, *]=rhoVar[l+1 : NQ-1, *]
-    rhoVar=rhoVar2        
     
     eta2=dblarr(NQ+1, Nfreq)
     eta2[0 : l, *]=eta[0 : l, *]
@@ -447,23 +454,41 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     eta2[l+2 : NQ, *]=eta[l+1 : NQ-1, *]
     eta=eta2
     
-    etaVar2=dblarr(NQ+1, Nfreq)
-    etaVar2[0 : l, *]=etaVar[0 : l, *]
-    etaVar2[l+1, *]=etaVar_x
-    etaVar2[l+2 : NQ, *]=etaVar[l+1 : NQ-1, *]
-    etaVar=etaVar2        
+    ItotalObs2=dblarr(NQ+1, Nfreq)
+    ItotalObs2[0 : l, *]=ItotalObs[0 : l, *]
+    ItotalObs2[l+1, *]=ItotalObs_x
+    ItotalObs2[l+2 : NQ, *]=ItotalObs[l+1 : NQ-1, *]
+    ItotalObs=ItotalObs2
     
-    Iobs2=dblarr(NQ+1, Nfreq)
-    Iobs2[0 : l, *]=Iobs[0 : l, *]
-    Iobs2[l+1, *]=Iobs_x
-    Iobs2[l+2 : NQ, *]=Iobs[l+1 : NQ-1, *]
-    Iobs=Iobs2
+    ItotalMod2=dblarr(NQ+1, Nfreq)
+    ItotalMod2[0 : l, *]=ItotalMod[0 : l, *]
+    ItotalMod2[l+1, *]=ItotalMod_x
+    ItotalMod2[l+2 : NQ, *]=ItotalMod[l+1 : NQ-1, *]
+    ItotalMod=ItotalMod2
+
+    ImaxObs2=dblarr(NQ+1, Nfreq)
+    ImaxObs2[0 : l, *]=ImaxObs[0 : l, *]
+    ImaxObs2[l+1, *]=ImaxObs_x
+    ImaxObs2[l+2 : NQ, *]=ImaxObs[l+1 : NQ-1, *]
+    ImaxObs=ImaxObs2
     
-    Imod2=dblarr(NQ+1, Nfreq)
-    Imod2[0 : l, *]=Imod[0 : l, *]
-    Imod2[l+1, *]=Imod_x
-    Imod2[l+2 : NQ, *]=Imod[l+1 : NQ-1, *]
-    Imod=Imod2
+    ImaxMod2=dblarr(NQ+1, Nfreq)
+    ImaxMod2[0 : l, *]=ImaxMod[0 : l, *]
+    ImaxMod2[l+1, *]=ImaxMod_x
+    ImaxMod2[l+2 : NQ, *]=ImaxMod[l+1 : NQ-1, *]
+    ImaxMod=ImaxMod2
+
+    IthrObs2=dblarr(NQ+1, Nfreq)
+    IthrObs2[0 : l, *]=IthrObs[0 : l, *]
+    IthrObs2[l+1, *]=IthrObs_x
+    IthrObs2[l+2 : NQ, *]=IthrObs[l+1 : NQ-1, *]
+    IthrObs=IthrObs2
+    
+    IthrMod2=dblarr(NQ+1, Nfreq)
+    IthrMod2[0 : l, *]=IthrMod[0 : l, *]
+    IthrMod2[l+1, *]=IthrMod_x
+    IthrMod2[l+2 : NQ, *]=IthrMod[l+1 : NQ-1, *]
+    IthrMod=IthrMod2
     
     CC2=dblarr(NQ+1, Nfreq)
     CC2[0 : l, *]=CC[0 : l, *]
@@ -483,13 +508,14 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
   
   mtr_min=min(mtr[*, j], ib)
   chiArr[j]=chi[ib, j]
-  chiVarArr[j]=chiVar[ib, j]
   rhoArr[j]=rho[ib, j]
-  rhoVarArr[j]=rhoVar[ib, j]
   etaArr[j]=eta[ib, j]
-  etaVarArr[j]=etaVar[ib, j]    
-  IobsArr[j]=Iobs[ib, j]
-  ImodArr[j]=Imod[ib, j]
+  ItotalObsArr[j]=ItotalObs[ib, j]
+  ItotalModArr[j]=ItotalMod[ib, j]
+  ImaxObsArr[j]=ImaxObs[ib, j]
+  ImaxModArr[j]=ImaxMod[ib, j]
+  IthrObsArr[j]=IthrObs[ib, j]
+  IthrModArr[j]=IthrMod[ib, j]    
   CCarr[j]=CC[ib, j]  
   bestQarr[j]=Qgrid[ib]
   modFlagArr[j, *]=flags[ib, *]
@@ -502,7 +528,10 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
   modImageConvArr->setmap, j, m
   bmap=obsImages[ib]
   m=bmap.getmap(j)
-  obsImageArr->setmap, j, m  
+  obsImageArr->setmap, j, m
+  bmap=obsImagesSigma[ib]
+  m=bmap.getmap(j)
+  obsImageSigmaArr->setmap, j, m     
  endif else begin
   bmap=modImages[0]
   m=bmap.getmap(j)
@@ -513,41 +542,50 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
   _obsI=obsImaps.getmap(j)
   ExtractSubmap, _obsI, m, 0, 0, _obsI.id, obsI
   obsImageArr->setmap, j, obsI
+  
+  _obsSI=obsSImaps.getmap(j)
+  ExtractSubmap, _obsSI, m, 0, 0, _obsSI.id, obsSI
+  obsImageSigmaArr->setmap, j, obsSI  
  endelse
  
  allQ=Qgrid
  allMetrics=mtr
 end
 
-pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a, b, Qstart, iso, $
-                  bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                  IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                  freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=thr, metric=metric, $
-                  noMultiFreq=noMultiFreq, Qstep=Qstep, loud=loud
+pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ ;input
+                  a, b, Qstart, Qstep, iso, thr, metric, MultiFreq_on, $         ;input
+                  freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $           ;output
+                  ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ ;output
+                  obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ ;output
+                  modFlagArr, allQ, allMetrics, $ ;extra output
+                  loud=loud
  forward_function MakeSimulationBox
 
- if ~keyword_set(noMultiFreq) then $
-  FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a, b, Qstart, iso, $
-                  bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                  IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                  freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=thr, metric=metric, $
-                  Qstep=Qstep, loud=loud $
+ if MultiFreq_on then $
+  FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ 
+                  a, b, Qstart, Qstep, iso, thr, metric, $         
+                  freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $           
+                  ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+                  obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+                  modFlagArr, allQ, allMetrics, loud=loud $
  else begin
   Nfreq=obsInfo.Nfreq
   
   bestQarr=dblarr(Nfreq)
   chiArr=dblarr(Nfreq)
-  chiVarArr=dblarr(Nfreq)
   rhoArr=dblarr(Nfreq)
-  rhoVarArr=dblarr(Nfreq) 
   etaArr=dblarr(Nfreq)
-  etaVarArr=dblarr(Nfreq)  
-  IobsArr=dblarr(Nfreq)
-  ImodArr=dblarr(Nfreq)
+  ItotalObsArr=dblarr(Nfreq)
+  ItotalModArr=dblarr(Nfreq)
+  ImaxObsArr=dblarr(Nfreq)
+  ImaxModArr=dblarr(Nfreq)
+  IthrObsArr=dblarr(Nfreq)
+  IthrModArr=dblarr(Nfreq)    
   CCarr=dblarr(Nfreq) 
   modImageArr=obj_new('map')
   modImageConvArr=obj_new('map')
   obsImageArr=obj_new('map')
+  obsImageSigmaArr=obj_new('map')
   modFlagArr=lonarr(Nfreq, 6)
   
   for i=0, Nfreq-1 do begin
@@ -565,21 +603,23 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
                 Nfreq: 1, freq: obsInfo.freq[i], sx: obsInfo.sx[i], sy: obsInfo.sy[i], $
                 psf_dx: obsInfo.psf_dx[i], psf_dy: obsInfo.psf_dy[i], psf: psf_loc}
                 
-   FindBestFitQmf, libname, model, ebtel, simbox_loc, obsImaps_loc, obsSImaps_loc, obsInfo_loc, a, b, Qstart, iso, $
-                   bestQarr_loc, chiArr_loc, chiVarArr_loc, rhoArr_loc, rhoVarArr_loc, etaArr_loc, etaVarArr_loc, $
-                   IobsArr_loc, ImodArr_loc, CCarr_loc, modImageArr_loc, modFlagArr_loc, $
-                   freqList_loc, allQ_loc, allMetrics_loc, modImageConvArr_loc, obsImageArr_loc, thr=thr, $
-                   metric=metric, Qstep=Qstep, loud=loud
+   FindBestFitQmf, libname, model, ebtel, simbox_loc, obsImaps_loc, obsSImaps_loc, obsInfo_loc, $ 
+                   a, b, Qstart, Qstep, iso, thr, metric, $         
+                   freqList_loc, bestQarr_loc, chiArr_loc, rhoArr_loc, etaArr_loc, CCarr_loc, $           
+                   ItotalObsArr_loc, ItotalModArr_loc, ImaxObsArr_loc, ImaxModArr_loc, IthrObsArr_loc, IthrModArr_loc, $ 
+                   obsImageArr_loc, obsImageSigmaArr_loc, modImageArr_loc, modImageConvArr_loc, $ 
+                   modFlagArr_loc, allQ_loc, allMetrics_loc, loud=loud
                    
    bestQarr[i]=bestQarr_loc
    chiArr[i]=chiArr_loc
-   chiVarArr[i]=chiVarArr_loc
-   rhoArr[i]=rhoArr_loc
-   rhoVarArr[i]=rhoVarArr_loc 
-   etaArr[i]=etaArr_loc
-   etaVarArr[i]=etaVarArr_loc  
-   IobsArr[i]=IobsArr_loc
-   ImodArr[i]=ImodArr_loc
+   rhoArr[i]=rhoArr_loc 
+   etaArr[i]=etaArr_loc  
+   ItotalObsArr[i]=ItotalObsArr_loc
+   ItotalModArr[i]=ItotalModArr_loc
+   ImaxObsArr[i]=ImaxObsArr_loc
+   ImaxModArr[i]=ImaxModArr_loc
+   IthrObsArr[i]=IthrObsArr_loc
+   IthrModArr[i]=IthrModArr_loc   
    CCarr[i]=CCarr_loc 
    m=modImageArr_loc.getmap(0)
    modImageArr->setmap, i, m
@@ -587,6 +627,8 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a
    modImageConvArr->setmap, i, m
    m=obsImageArr_loc.getmap(0)
    obsImageArr->setmap, i, m
+   m=obsImageSigmaArr_loc.getmap(0)
+   obsImageSigmaArr->setmap, i, m   
    modFlagArr[i, *]=modFlagArr[0, *]
   endfor
   

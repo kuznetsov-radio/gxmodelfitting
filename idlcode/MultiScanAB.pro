@@ -78,6 +78,12 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;  If both /DEM and /DDM keywords (or none of them) are set, the code loads both tables.
 ;  If the chosen file contains only one EBTEL table (either DEM or DDM), the code loads that table; 
 ;  the /DEM and /DDM keywords are ignored.
+;  
+; Qstep - the initial relative step over Q0 to search for the optimal heating rate value (must be >1).
+; Default: the golden ratio value (1.6180339). 
+; 
+; loud - if set, the code displays more detailed information when it fails to find a solution (e.g., when the minimization
+;  procedure goes beyond the EBTEL table).
 ;
 ;Results:
 ; As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file
@@ -110,8 +116,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;  freqList - array of the emission frequencies, in GHz.
 ;  bestQ - 3D array (N_a*N_b*N_freq, where N_a, N_b, and N_freq are the sizes of the alist, blist, and freqList
 ;          arrays, respectively) of the obtained best-fit heating rates Q0 at different values of a, b, and frequency.
-;  Iobs, Imod - 3D arrays (N_a*N_b*N_freq) of the total observed and model radio fluxes at different values of
-;               a, b, and frequency. The fluxes correspond to the obtained best-fit Q0 values.
+;  ItotalObs, ItotalMod - 3D arrays (N_a*N_b*N_freq) of the total observed and model radio fluxes at different values of
+;                         a, b, and frequency. The fluxes correspond to the obtained best-fit Q0 values.
 ;  CC - 3D array (N_a*N_b*N_freq) of the correlation coefficients of the observed and model radio maps at 
 ;       different values of a, b, and frequency. The coefficients correspond to the obtained best-fit Q0 values.
 ;  shiftX, shiftY - 3D arrays (N_a*N_b*N_freq) of the shifts (in arcseconds) applied to the observed radio maps
@@ -124,10 +130,20 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 
  if exist(RefFiles) then ObsFileNames=RefDir+RefFiles else ObsFileNames=file_search(RefDir+'*.sav')
  LoadObservations, ObsFileNames, obsImaps, obsSImaps, obsInfo
+ sxArr=obsInfo.sx
+ syArr=obsInfo.sy
+ beamArr=obj_new('map')
+ for i=0, obsInfo.Nfreq-1 do begin
+  beam=(obsInfo.psf)[i]
+  m=make_map(beam, xc=0, yc=0, dx=obsInfo.psf_dx[i], dy=obsInfo.psf_dy[i])
+  beamArr->setmap, i, m
+ endfor
 
  model=LoadGXmodel(ModelFileName)
  
  ebtel=LoadEBTEL(EBTELfileName, DEM=DEM, DDM=DDM)
+ DEM_on=ebtel.DEM_on
+ DDM_on=ebtel.DDM_on
  
  N_a=n_elements(alist)
  N_b=n_elements(blist)
@@ -149,11 +165,15 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  if ~exist(metric) then metric='eta'
  if (metric ne 'eta') && (metric ne 'chi') && (metric ne 'rho') then metric='eta'
  
- if ~exist(MultiThermal) then iso=1 else iso=MultiThermal eq 0
+ if ~exist(MultiThermal) then iso=1 else iso=(MultiThermal eq 0)
+ 
+ if ~exist(noMultiFreq) then MultiFreq_on=1 else MultiFreq_on=(noMultiFreq eq 0)
 
  ObsID=exist(ObsDateTime) ? ObsDateTime : ''
  
  if exist(ObsDateTime) then ObsDateTime='_'+ObsDateTime else ObsDateTime=''
+ 
+ if ~exist(Qstep) then Qstep=(1d0+sqrt(5d0))/2
 
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, ObsInfo.freq)       
  
@@ -173,15 +193,20 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   if ~file_exist(fname) then begin
    tstart1=systime(1)
    
-   FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a, b, Qstart, iso, $
-                 bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                 IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                 freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold, metric=metric, $
-                 noMultiFreq=noMultiFreq, Qstep=Qstep, loud=loud
+   FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ 
+                 a, b, Qstart, Qstep, iso, threshold, metric, MultiFreq_on, $         
+                 freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
+                 ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+                 obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+                 modFlagArr, allQ, allMetrics, loud=loud
          
-   save, a, b, bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-         modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-         freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
+   save, LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
+         sxArr, syArr, beamArr, $
+         a, b, Qstart, Qstep, iso, threshold, metric, MultiFreq_on, $
+         freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ 
+         ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+         obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+         modFlagArr, allQ, allMetrics, $
          filename=fname, /compress
    
    print, 'The best fit Q for a=', a, ', b=', b, ' computed in ', systime(1)-tstart1, ' s'
@@ -196,13 +221,10 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  
  bestQ=dblarr(N_a, N_b, N_freq)
  chi=dblarr(N_a, N_b, N_freq)
- chiVar=dblarr(N_a, N_b, N_freq)
  rho=dblarr(N_a, N_b, N_freq)
- rhoVar=dblarr(N_a, N_b, N_freq)  
  eta=dblarr(N_a, N_b, N_freq)
- etaVar=dblarr(N_a, N_b, N_freq)
- Iobs=dblarr(N_a, N_b, N_freq)
- Imod=dblarr(N_a, N_b, N_freq)
+ ItotalObs=dblarr(N_a, N_b, N_freq)
+ ItotalMod=dblarr(N_a, N_b, N_freq)
  CC=dblarr(N_a, N_b, N_freq)    
  shiftX=dblarr(N_a, N_b, N_freq)
  shiftY=dblarr(N_a, N_b, N_freq)
@@ -216,31 +238,25 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
         '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav' 
   o=obj_new('IDL_Savefile', fname)
   o->restore, 'chiArr'
-  o->restore, 'chiVarArr'
   o->restore, 'rhoArr'
-  o->restore, 'rhoVarArr'    
   o->restore, 'etaArr'
-  o->restore, 'etaVarArr'
   o->restore, 'bestQarr'
-  o->restore, 'IobsArr'
-  o->restore, 'ImodArr'
+  o->restore, 'ItotalObsArr'
+  o->restore, 'ItotalModArr'
   o->restore, 'CCarr'
   o->restore, 'obsImageArr'
   obj_destroy, o      
   
   for k=0, N_freq-1 do begin
    chi[i, j, k]=chiArr[k] 
-   chiVar[i, j, k]=chiVarArr[k]
    rho[i, j, k]=rhoArr[k] 
-   rhoVar[i, j, k]=rhoVarArr[k]           
    eta[i, j, k]=etaArr[k] 
-   etaVar[i, j, k]=etaVarArr[k]  
    bestQ[i, j, k]=bestQarr[k]
-   Iobs[i, j, k]=IobsArr[k]
-   Imod[i, j, k]=ImodArr[k]
+   ItotalObs[i, j, k]=ItotalObsArr[k]
+   ItotalMod[i, j, k]=ItotalModArr[k]
    CC[i, j, k]=CCarr[k]
    
-   m=obsimagearr.getmap(k)
+   m=obsImageArr.getmap(k)
    if tag_exist(m, 'shiftX') then shiftX[i, j, k]=m.shiftX
    if tag_exist(m, 'shiftY') then shiftY[i, j, k]=m.shiftY
   endfor
@@ -249,8 +265,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  fname1=OutDir+'Summary_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
         (iso ? '_I': '_M')+ObsDateTime+'.sav'
  
- save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, rho, rhoVar, eta, etaVar, $
-       modelFileName, EBTELfileName, ObsID, shiftX, shiftY, filename=fname1
+ save, alist, blist, freqList, bestQ, ItotalObs, ItotalMod, CC, chi, rho, eta, metric, iso, threshold, $
+       modelFileName, EBTELfileName, DEM_on, DDM_on, MultiFreq_on, ObsID, shiftX, shiftY, filename=fname1
  
  print, 'Done'
 end
