@@ -2,7 +2,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  alist, blist, xc, yc, dx, dy, Nx, Ny, $
                  RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, $
                  MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM, $
-                 Qstep=Qstep, loud=loud
+                 Qstep=Qstep, xy_shift=xy_shift, loud=loud
 ;This program searches for the heating rate value Q0 that provides the best agreement between the model and
 ;observed radio maps, for the specified parameters a and b of the coronal heating model.
 ;
@@ -81,6 +81,10 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;  
 ; Qstep - the initial relative step over Q0 to search for the optimal heating rate value (must be >1).
 ; Default: the golden ratio value (1.6180339). 
+; 
+; xy_shift - shifts applied to the observed microwave map, a 2-element vector in the form of xy_shift=[dx, dy], in arcseconds.
+; If this parameter is not specified (by default), the shifts are computed automatically each time (i.e., for each frequency
+; and a, b, and Q0 values) to provide the maximum correlation between the observed and model images. 
 ; 
 ; loud - if set, the code displays more detailed information when it fails to find a solution (e.g., when the minimization
 ;  procedure goes beyond the EBTEL table).
@@ -175,6 +179,11 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  if exist(ObsDateTime) then ObsDateTime='_'+ObsDateTime else ObsDateTime=''
  
  if ~exist(Qstep) then Qstep=(1d0+sqrt(5d0))/2
+ 
+ if exist(xy_shift) then fixed_shifts=1 else begin
+  xy_shift=0
+  fixed_shifts=0
+ endelse
 
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, ObsInfo.freq)       
  
@@ -195,7 +204,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
    tstart1=systime(1)
    
    FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ 
-                 a, b, Qstart, Qstep, iso, threshold_img, metric, MultiFreq_on, $         
+                 a, b, Qstart, Qstep, iso, threshold_img, metric, MultiFreq_on, fixed_shifts, xy_shift, $         
                  freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                  ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                  obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
@@ -203,7 +212,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
          
    save, LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
          sxArr, syArr, beamArr, $
-         a, b, Qstart, Qstep, iso, threshold_img, metric, MultiFreq_on, $
+         a, b, Qstart, Qstep, iso, threshold_img, metric, MultiFreq_on, fixed_shifts, $
          freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ 
          ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
          obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 

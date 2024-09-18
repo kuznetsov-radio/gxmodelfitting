@@ -1,6 +1,6 @@
 pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ ;input
-                    a, b, Qstart, Qstep, iso, thr, metric, $                       ;input
-                    freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $           ;output
+                    a, b, Qstart, Qstep, iso, thr, metric, fixed_shifts, xy_shift, $ ;input
+                    freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ ;output
                     ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ ;output
                     obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ ;output
                     modFlagArr, allQ, allMetrics, $ ;extra output
@@ -97,7 +97,10 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     modI.data=convol_fft(modI.data, beam)
     modX->setmap, j, modI
     
-    FindShift, _obsI, modI, dx, dy
+    if fixed_shifts then begin
+     dx=xy_shift[0]
+     dy=xy_shift[1]
+    endif else FindShift, _obsI, modI, dx, dy
     ExtractSubmap, _obsI, modI, dx, dy, _obsI.id, obsI
     obsI=create_struct('shiftX', dx, $
                        'shiftY', dy, $
@@ -396,7 +399,10 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
      modI.data=convol_fft(modI.data, beam)
      modX->setmap, k, modI
     
-     FindShift, _obsI, modI, dx, dy
+     if fixed_shifts then begin
+      dx=xy_shift[0]
+      dy=xy_shift[1]
+     endif else FindShift, _obsI, modI, dx, dy
      ExtractSubmap, _obsI, modI, dx, dy, _obsI.id, obsI
      obsI=create_struct('shiftX', dx, $
                         'shiftY', dy, $
@@ -553,8 +559,8 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
 end
 
 pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ ;input
-                  a, b, Qstart, Qstep, iso, thr, metric, MultiFreq_on, $         ;input
-                  freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $           ;output
+                  a, b, Qstart, Qstep, iso, thr, metric, MultiFreq_on, fixed_shifts, xy_shift, $ ;input
+                  freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ ;output
                   ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ ;output
                   obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ ;output
                   modFlagArr, allQ, allMetrics, $ ;extra output
@@ -563,7 +569,7 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
 
  if MultiFreq_on then $
   FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ 
-                  a, b, Qstart, Qstep, iso, thr, metric, $         
+                  a, b, Qstart, Qstep, iso, thr, metric, fixed_shifts, xy_shift, $         
                   freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $           
                   ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                   obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
@@ -604,7 +610,7 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                 psf_dx: obsInfo.psf_dx[i], psf_dy: obsInfo.psf_dy[i], psf: psf_loc}
                 
    FindBestFitQmf, libname, model, ebtel, simbox_loc, obsImaps_loc, obsSImaps_loc, obsInfo_loc, $ 
-                   a, b, Qstart, Qstep, iso, thr, metric, $         
+                   a, b, Qstart, Qstep, iso, thr, metric, fixed_shifts, xy_shift, $         
                    freqList_loc, bestQarr_loc, chiArr_loc, rhoArr_loc, etaArr_loc, CCarr_loc, $           
                    ItotalObsArr_loc, ItotalModArr_loc, ImaxObsArr_loc, ImaxModArr_loc, IthrObsArr_loc, IthrModArr_loc, $ 
                    obsImageArr_loc, obsImageSigmaArr_loc, modImageArr_loc, modImageConvArr_loc, $ 
