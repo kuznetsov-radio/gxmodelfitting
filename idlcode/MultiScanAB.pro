@@ -276,7 +276,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
         (iso ? '_I': '_M')+ObsDateTime+'.sav'
  
  save, alist, blist, freqList, bestQ, ItotalObs, ItotalMod, CC, chi, rho, eta, metric, iso, threshold_img, $
-       modelFileName, EBTELfileName, DEM_on, DDM_on, MultiFreq_on, ObsID, shiftX, shiftY, filename=fname1
+       modelFileName, EBTELfileName, DEM_on, DDM_on, MultiFreq_on, ObsID, shiftX, shiftY, fixed_shifts, $
+       filename=fname1
  
  print, 'Done'
 end
