@@ -108,7 +108,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;  obsImageArr - (multi-frequency) map object containing the observed radio maps rebinned and shifted to
 ;                match the best-fit model maps at the corresponding frequencies.
 ; If the algorithm failed to find the best-fit heating rate at a certain frequency (e.g., the used metric has 
-; no minimum within the valid Q0 range, or has more than one local minimum), the corresponding BestQarr, rhoArr, 
+; no minimum within the valid Q0 range, or has more than one local minimum), the corresponding bestQarr, rhoArr, 
 ; chiArr, and etaArr are set to NaN, and the corresponding image maps contain all zeros.
 ; Note: the program does not overwrite the existing fit*.sav files. If the program is interrupted, on the next launch
 ; it will compute the results only for those (a, b) values that have not been processed before.

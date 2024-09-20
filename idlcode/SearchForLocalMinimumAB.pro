@@ -193,17 +193,25 @@ pro ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da
  endif
 end
 
-pro SaveLocalResults, OutDir, metric, threshold, iso, ObsDateTime, ObsFreq, a, b, $
-                      bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                      modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-                      freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
- fname=OutDir+'fit_'+metric+'_thr'+string(threshold, format='(F5.3)')+$
+pro SaveLocalResults, OutDir, ObsDateTime, ObsFreq, $
+                      LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
+                      sxArr, syArr, beamArr, $
+                      a, b, Qstart, Qstep, iso, threshold_img, threshold_metric, metric, MultiFreq_on, fixed_shifts, $
+                      freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ 
+                      ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+                      obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+                      modFlagArr, allQ, allMetrics
+ fname=OutDir+'fit_'+metric+'_thr'+string(threshold_img, format='(F5.3)')+$
        (iso ? '_I' : '_M')+ObsDateTime+ObsFreq+$
        '_a'+string(a, format='(F+6.3)')+'_b'+string(b, format='(F+6.3)')+'.sav'
         
- save, a, b, bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-       modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-       freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName, $
+ save, LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
+       sxArr, syArr, beamArr, $
+       a, b, Qstart, Qstep, iso, threshold_img, threshold_metric, metric, MultiFreq_on, fixed_shifts, $
+       freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ 
+       ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+       obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+       modFlagArr, allQ, allMetrics, $
        filename=fname, /compress
 end 
 
@@ -239,7 +247,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                              Q0start=Q0start, metric=metric, $
                              threshold_img=threshold_img, threshold_metric=threshold_metric, $
                              MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, $
-                             a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, loud=loud
+                             a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, xy_shift=xy_shift, loud=loud
 ;This program searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement 
 ;between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations
 ;comparison metric. 
@@ -330,6 +338,16 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ; noArea - if set, the area of good agreement (within the threshold_metric threshold) is not computed, i.e., the code
 ; stops after finding the local minimum.
 ; Default: 0 (the area of good agreement is computed). 
+; 
+; Qstep - the initial relative step over Q0 to search for the optimal heating rate value (must be >1).
+; Default: the golden ratio value (1.6180339). 
+; 
+; xy_shift - shifts applied to the observed microwave map, a 2-element vector in the form of xy_shift=[dx, dy], in arcseconds.
+; If this parameter is not specified (by default), the shifts are computed automatically each time (i.e., for each frequency
+; and a, b, and Q0 values) to provide the maximum correlation between the observed and model images. 
+; 
+; loud - if set, the code displays more detailed information when it fails to find a solution (e.g., when the minimization
+;  procedure goes beyond the EBTEL table).
 ;
 ;Results:
 ; The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency
@@ -341,8 +359,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ;  freqList - 1-element array containing the emission frequency, in GHz.
 ;  bestQ - 3D array (N_a*N_b*1, where N_a and N_b are the sizes of the alist and blist arrays, respectively) of the 
 ;          obtained best-fit heating rates Q0 at different values of a and b.
-;  Iobs, Imod - 3D arrays (N_a*N_b*1) of the total observed and model radio fluxes at different values of a and b. 
-;               The fluxes correspond to the obtained best-fit Q0 values.
+;  ItotalObs, ItotalMod - 3D arrays (N_a*N_b*1) of the total observed and model radio fluxes at different values of a and b. 
+;                         The fluxes correspond to the obtained best-fit Q0 values.
 ;  CC - 3D array (N_a*N_b*1) of the correlation coefficients of the observed and model radio maps at different 
 ;       values of a and b. The coefficients correspond to the obtained best-fit Q0 values.
 ;  shiftX, shiftY - 3D arrays (N_a*N_b*1) of the shifts (in arcseconds) applied to the observed radio maps
@@ -353,11 +371,11 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ;                  minimized; two other metrics correspond to the obtained best-fit Q0 values.
 ; Note, that if the algorithm has failed to find the best-fit heating rate Q0 at a certain combination of a and b 
 ; (e.g., the used metric has no minimum within the valid Q0 range, or has more than one local minimum), the 
-; corresponding bestQ, Imod, CC, rho, chi, eta, shiftX, and shiftY are set to NaN.
+; corresponding bestQ, ItotalMod, CC, rho, chi, eta, shiftX, and shiftY are set to NaN.
 ; If the data for a certain combination of a and b are missing (because the search for the best-fit Q0 is performed 
 ; only within a subset of the rectangular area determined by the regular grids alist and blist), the 
-; corresponding bestQ, Imod, CC, rho, chi, and eta are set to -1. Therefore, when  analyzing the results, only the 
-; points where bestQ is finite and bestQ>0 should be considered. If the Summary*.sav file exists, it will be 
+; corresponding bestQ, ItotalMod, CC, rho, chi, and eta are set to -1. Therefore, when analyzing the results, only the 
+; points where, e.g., bestQ is finite and bestQ>0 should be considered. If the Summary*.sav file exists, it will be 
 ; overwritten.
 
 ; The program saves the temporary progress: for each (a, b) combination it creates in the OutDir directory a .sav 
@@ -383,12 +401,23 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  tstart0=systime(1)    
 
  LoadObservations, RefFileName, obsImaps, obsSImaps, obsInfo
+ sxArr=obsInfo.sx
+ syArr=obsInfo.sy
+ beamArr=obj_new('map')
+ for i=0, obsInfo.Nfreq-1 do begin
+  beam=(obsInfo.psf)[i]
+  m=make_map(beam, xc=0, yc=0, dx=obsInfo.psf_dx[i], dy=obsInfo.psf_dy[i])
+  beamArr->setmap, i, m
+ endfor 
 
  model=LoadGXmodel(ModelFileName)
  
  ebtel=LoadEBTEL(EBTELfileName, DEM=DEM, DDM=DDM)
+ DEM_on=ebtel.DEM_on
+ DDM_on=ebtel.DDM_on 
  
  if ~exist(Q0start) then Q0start=exp(-10.1-0.193*a_start+2.17*b_start)
+ Qstart=Q0start
  
  if ~exist(threshold_img) then threshold_img=0.1d0
  
@@ -406,6 +435,15 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  
  if exist(a_range) then a_range=[a_range[0]>(-9.999), a_range[1]<9.999] else a_range=[-9.999, 9.999]
  if exist(b_range) then b_range=[b_range[0]>(-9.999), b_range[1]<9.999] else b_range=[-9.999, 9.999]
+ 
+ if ~exist(Qstep) then Qstep=(1d0+sqrt(5d0))/2
+ 
+ if exist(xy_shift) then fixed_shifts=1 else begin
+  xy_shift=0
+  fixed_shifts=0
+ endelse  
+ 
+ MultiFreq_on=1
 
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, ObsInfo.freq)   
  
@@ -420,15 +458,21 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  
  if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_start, b_start, $
                       bestQarr, chiArr, rhoArr, etaArr) then begin
-  FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, a_start, b_start, Q0start, iso, $
-                bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric, $
-                Qstep=Qstep, loud=loud
-  SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_start, b_start, $
-                    bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                    modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-                    freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
+  FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ 
+                a_start, b_start, Qstart, Qstep, iso, threshold_img, metric, MultiFreq_on, fixed_shifts, xy_shift, $         
+                freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
+                ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+                obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+                modFlagArr, allQ, allMetrics, loud=loud
+                 
+  SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
+                    LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
+                    sxArr, syArr, beamArr, $
+                    a_start, b_start, Qstart, Qstep, iso, threshold_img, threshold_metric, metric, MultiFreq_on, fixed_shifts, $
+                    freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ 
+                    ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+                    obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+                    modFlagArr, allQ, allMetrics
  endif   
  
  case metric of                
@@ -452,16 +496,23 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   for i=i0-1, i0+1 do for j=j0-1, j0+1 do if finite(mtr_arr[i, j]) && (mtr_arr[i, j] lt 0) then begin
    if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_arr[i, j], b_arr[i, j], $
                         bestQarr, chiArr, rhoArr, etaArr) then begin
-    FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
-                  a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], iso, $
-                  bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                  IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                  freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric, $
-                  Qstep=Qstep, loud=loud
-    SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_arr[i, j], b_arr[i, j], $
-                      bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                      modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-                      freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
+    FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ 
+                  a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], Qstep, iso, threshold_img, metric, $
+                  MultiFreq_on, fixed_shifts, xy_shift, $         
+                  freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
+                  ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+                  obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+                  modFlagArr, allQ, allMetrics, loud=loud
+                  
+    SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
+                      LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
+                      sxArr, syArr, beamArr, $
+                      a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], Qstep, iso, threshold_img, threshold_metric, $
+                      metric, MultiFreq_on, fixed_shifts, $
+                      freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ 
+                      ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+                      obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+                      modFlagArr, allQ, allMetrics
    endif       
    
    case metric of                      
@@ -500,16 +551,22 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
     for i=i0-1, i0+1 do for j=j0-1, j0+1 do if finite(mtr_arr[i, j]) && (mtr_arr[i, j] lt 0) then begin
      if ~LoadLocalResults(OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_arr[i, j], b_arr[i, j], $
                           bestQarr, chiArr, rhoArr, etaArr) then begin
-      FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
-                    a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], iso, $
-                    bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                    IobsArr, ImodArr, CCarr, modImageArr, modFlagArr, $
-                    freqList, allQ, allMetrics, modImageConvArr, obsImageArr, thr=threshold_img, metric=metric, $
-                    Qstep=Qstep, loud=loud
-      SaveLocalResults, OutDir, metric, threshold_img, iso, ObsDateTime1, ObsFreq1, a_arr[i, j], b_arr[i, j], $
-                        bestQarr, chiArr, chiVarArr, rhoArr, rhoVarArr, etaArr, etaVarArr, $
-                        modImageArr, modFlagArr, IobsArr, ImodArr, CCarr, $
-                        freqList, allQ, allMetrics, modImageConvArr, obsImageArr, modelFileName, EBTELfileName
+      FindBestFitQ, LibFileName, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $ 
+                    a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], Qstep, iso, threshold_img, metric, $
+                    MultiFreq_on, fixed_shifts, xy_shift, $         
+                    freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
+                    ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+                    obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+                    modFlagArr, allQ, allMetrics, loud=loud
+      SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
+                        LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
+                        sxArr, syArr, beamArr, $
+                        a_arr[i, j], b_arr[i, j], Q0_arr[i0, j0], Qstep, iso, threshold_img, threshold_metric, $
+                        metric, MultiFreq_on, fixed_shifts, $
+                        freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ 
+                        ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
+                        obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
+                        modFlagArr, allQ, allMetrics
      endif                                 
 
      case metric of                      
@@ -534,26 +591,20 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  
  bestQ=dblarr(N_a, N_b, N_freq)
  chi=dblarr(N_a, N_b, N_freq)
- chiVar=dblarr(N_a, N_b, N_freq)
  rho=dblarr(N_a, N_b, N_freq)
- rhoVar=dblarr(N_a, N_b, N_freq)
  eta=dblarr(N_a, N_b, N_freq)
- etaVar=dblarr(N_a, N_b, N_freq)
- Iobs=dblarr(N_a, N_b, N_freq)
- Imod=dblarr(N_a, N_b, N_freq)
+ ItotalObs=dblarr(N_a, N_b, N_freq)
+ ItotalMod=dblarr(N_a, N_b, N_freq)
  CC=dblarr(N_a, N_b, N_freq)    
  shiftX=dblarr(N_a, N_b, N_freq)
  shiftY=dblarr(N_a, N_b, N_freq)
  
  bestQ[*]=-1
  chi[*]=-1
- chiVar[*]=-1
  rho[*]=-1
- rhoVar[*]=-1 
  eta[*]=-1
- etaVar[*]=-1 
- Iobs[*]=-1
- Imod[*]=-1
+ ItotalObs[*]=-1
+ ItotalMod[*]=-1
  CC[*]=-1
  shiftX[*]=!values.d_NaN
  shiftY[*]=!values.d_NaN
@@ -564,14 +615,11 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   
   if (a le a_range[0]) || (a ge a_range[1]) || (b le b_range[0]) || (b ge b_range[1]) then begin
    chi[i, j, *]=!values.d_NaN 
-   chiVar[i, j, *]=!values.d_NaN
    rho[i, j, *]=!values.d_NaN 
-   rhoVar[i, j, *]=!values.d_NaN      
    eta[i, j, *]=!values.d_NaN 
-   etaVar[i, j, *]=!values.d_NaN   
    bestQ[i, j, *]=!values.d_NaN 
-   Iobs[i, j, *]=!values.d_NaN 
-   Imod[i, j, *]=!values.d_NaN 
+   ItotalObs[i, j, *]=!values.d_NaN 
+   ItotalMod[i, j, *]=!values.d_NaN 
    CC[i, j, *]=!values.d_NaN 
   endif else begin 
    fname=OutDir+'fit_'+metric+'_thr'+string(threshold_img, format='(F5.3)')+$
@@ -581,31 +629,25 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
    if file_exist(fname) then begin
     o=obj_new('IDL_Savefile', fname)
     if InSav(o, 'chiArr') then o->restore, 'chiArr' else chiArr=dblarr(N_freq)
-    if InSav(o, 'chiVarArr') then o->restore, 'chiVarArr' else chiVarArr=dblarr(N_freq)
     if InSav(o, 'rhoArr') then o->restore, 'rhoArr' else rhoArr=dblarr(N_freq)
-    if InSav(o, 'rhoVarArr') then o->restore, 'rhoVarArr' else rhoVarArr=dblarr(N_freq)
     if InSav(o, 'etaArr') then o->restore, 'etaArr' else etaArr=dblarr(N_freq)
-    if InSav(o, 'etaVarArr') then o->restore, 'etaVarArr' else etaVarArr=dblarr(N_freq)            
     o->restore, 'bestQarr'
-    o->restore, 'IobsArr'
-    o->restore, 'ImodArr'
+    o->restore, 'ItotalObsArr'
+    o->restore, 'ItotalModArr'
     o->restore, 'CCarr'
     o->restore, 'obsImageArr'
     obj_destroy, o      
   
     for k=0, N_freq-1 do begin
      chi[i, j, k]=chiArr[k]
-     chiVar[i, j, k]=chiVarArr[k]
      rho[i, j, k]=rhoArr[k]
-     rhoVar[i, j, k]=rhoVarArr[k]         
      eta[i, j, k]=etaArr[k]
-     etaVar[i, j, k]=etaVarArr[k]  
      bestQ[i, j, k]=bestQarr[k]
-     Iobs[i, j, k]=IobsArr[k]
-     Imod[i, j, k]=ImodArr[k]
+     ItotalObs[i, j, k]=ItotalObsArr[k]
+     ItotalMod[i, j, k]=ItotalModArr[k]
      CC[i, j, k]=CCarr[k]
      
-     m=obsimagearr.getmap(k)
+     m=obsImageArr.getmap(k)
      if tag_exist(m, 'shiftX') then shiftX[i, j, k]=m.shiftX
      if tag_exist(m, 'shiftY') then shiftY[i, j, k]=m.shiftY
     endfor
@@ -616,8 +658,9 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  fname1=OutDir+'Summary_'+metric+'_thr'+string(threshold_img, format='(F5.3)')+$
         (iso ? '_I': '_M')+ObsDateTime1+ObsFreq1+'.sav'
  
- save, alist, blist, freqList, bestQ, Iobs, Imod, CC, chi, chiVar, rho, rhoVar, eta, etaVar, $
-       modelFileName, EBTELfileName, ObsID, shiftX, shiftY, filename=fname1
+ save, alist, blist, freqList, bestQ, ItotalObs, ItotalMod, CC, chi, rho, eta, metric, iso, threshold_img, threshold_metric, $
+       modelFileName, EBTELfileName, DEM_on, DDM_on, MultiFreq_on, ObsID, shiftX, shiftY, fixed_shifts, $
+       filename=fname1
  
  print, 'Done'
  
