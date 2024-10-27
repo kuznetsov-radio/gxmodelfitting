@@ -7,16 +7,26 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;observed radio maps, for the specified parameters a and b of the coronal heating model.
 ;
 ;Input parameters:
-; RefDir - the directory where the observed radio maps are stored.
+; RefDir - the directory where the observed radio maps/profiles are stored.
 ; If the parameter RefFiles is omitted, the program loads all *.sav files in the RefDir directory.
 ; Otherwise, the program loads the file(s) specified by RefDir+RefFiles.
-; Each .sav file should contain a 'ref' map object with three maps:
-; I_obs=ref.getmap(0) - the observed radio map, with the tags I_obs.freq specifying the emission frequency in GHz,
+; For general 2D radio maps, each .sav file should contain a 'ref' map object with three maps:
+; I_obs=ref.getmap(0) - the observed radio map (in terms of brightness temperature in K), 
+;                       with the tags I_obs.freq specifying the emission frequency in GHz,
 ;                       and I_obs.id specifying the map title,
 ; sigma=ref.getmap(1) - the corresponding instrumental noise (with the same dimensions as I_obs),
 ; beam =ref.getmap(2) - the instrument beam (point-spread function), with the tags beam.a_beam and beam.b_beam
 ;                       specifying the beam half-widths at 1/e level in two ortogonal directions, in arcseconds.
 ; Other required tags of these maps are standard for the SSW map structure.
+; For 1D intensity profiles observed by RATAN-600, each .sav file should contain two fields:
+; instrument='RATAN' - the label to identify the data format,
+; ref={flux, x, freq, time, rot} - the structure specifying the data, i.e.,
+; flux - the intensity profile, 1D array, in units of sfu/arcsec,
+; x - the corresponding coordinates, 1D array, in arcsec,
+; freq - the emission frequency, in GHz,
+; time - the observation time, string (the same as in SSW map structures),
+; rot - the RATAN positional angle, in degrees.
+; Note that 1D profiles and 2D maps cannot be mixed together.
 ;
 ; ModelFileName - name of the .sav file that contains the GX Simulator model.
 ;
@@ -82,9 +92,11 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ; Qstep - the initial relative step over Q0 to search for the optimal heating rate value (must be >1).
 ; Default: the golden ratio value (1.6180339). 
 ; 
-; xy_shift - shifts applied to the observed microwave map, a 2-element vector in the form of xy_shift=[dx, dy], in arcseconds.
-; If this parameter is not specified (by default), the shifts are computed automatically each time (i.e., for each frequency
-; and a, b, and Q0 values) to provide the maximum correlation between the observed and model images. 
+; xy_shift - shift applied to the observed microwave maps/profiles, a 2-element vector in the form of xy_shift=[dx, dy] 
+;  (for 2D maps), or a scalar value (for 1D profiles), in arcseconds.
+;  If this parameter is not specified (by default), the shift is computed automatically each time 
+;  (i.e., for each frequency and a, b, and Q0 values) to provide the maximum correlation between the observed 
+;  and model images/profiles. 
 ; 
 ; loud - if set, the code displays more detailed information when it fails to find a solution (e.g., when the minimization
 ;  procedure goes beyond the EBTEL table).
@@ -103,10 +115,13 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;  modImageArr - (multi-frequency) map object containing the best-fit model radio maps (corresponding to the
 ;                best-fit heating rates Q0) at different frequencies. The maps are not convolved with the 
 ;                instrument beam.
-;  modImageConvArr - (multi-frequency) map object containing the above-mentioned best-fit model radio maps
-;                    convolved with the instrument beam.
-;  obsImageArr - (multi-frequency) map object containing the observed radio maps rebinned and shifted to
-;                match the best-fit model maps at the corresponding frequencies.
+;  modImageConvArr - if the input is in the form of 2D maps, this is a (multi-frequency) map object containing 
+;                    the above-mentioned best-fit model radio maps convolved with the instrument beam.
+;  obsImageArr - if the input is in the form of 2D maps, this is a (multi-frequency) map object containing the observed 
+;                radio maps rebinned and shifted to match the best-fit model maps at the corresponding frequencies.
+; If the input is in the form of 1D profiles, the fields modImageConvArr and obsImageArr are lists of structures
+; (in the same format as described above) specifying the model 1D scans and the observed 1D scans rebinned and
+; shifted to match the models, respectively.
 ; If the algorithm failed to find the best-fit heating rate at a certain frequency (e.g., the used metric has 
 ; no minimum within the valid Q0 range, or has more than one local minimum), the corresponding bestQarr, rhoArr, 
 ; chiArr, and etaArr are set to NaN, and the corresponding image maps contain all zeros.
@@ -126,7 +141,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;       different values of a, b, and frequency. The coefficients correspond to the obtained best-fit Q0 values.
 ;  shiftX, shiftY - 3D arrays (N_a*N_b*N_freq) of the shifts (in arcseconds) applied to the observed radio maps
 ;                   to obtain the best correlation with the model maps, at different values of a, b, and frequency.
-;                   The shifts correspond to the obtained best-fit Q0 values.
+;                   The shifts correspond to the obtained best-fit Q0 values. If the input is in the form of 1D
+;                   profiles, shiftY is always zero.
 ;  rho, chi, eta - 3D arrays (N_a*N_b*N_freq) of the obtained rho^2, chi^2, and eta^2 metrics at different values of 
 ;                  a, b, and frequency. Note that only one of those metrics (defined by the 'metric' keyword) is 
 ;                  actually minimized; two other metrics correspond to the obtained best-fit Q0 values. 
@@ -134,14 +150,21 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 
  if exist(RefFiles) then ObsFileNames=RefDir+RefFiles else ObsFileNames=file_search(RefDir+'*.sav')
  LoadObservations, ObsFileNames, obsImaps, obsSImaps, obsInfo
- sxArr=obsInfo.sx
- syArr=obsInfo.sy
- beamArr=obj_new('map')
- for i=0, obsInfo.Nfreq-1 do begin
-  beam=(obsInfo.psf)[i]
-  m=make_map(beam, xc=0, yc=0, dx=obsInfo.psf_dx[i], dy=obsInfo.psf_dy[i])
-  beamArr->setmap, i, m
- endfor
+ instrument=obsInfo.id
+ if obsInfo.id eq 'RATAN' then begin
+  sxArr=0
+  syArr=0
+  beamArr=0
+ endif else begin
+  sxArr=obsInfo.sx
+  syArr=obsInfo.sy
+  beamArr=obj_new('map')
+  for i=0, obsInfo.Nfreq-1 do begin
+   beam=(obsInfo.psf)[i]
+   m=make_map(beam, xc=0, yc=0, dx=obsInfo.psf_dx[i], dy=obsInfo.psf_dy[i])
+   beamArr->setmap, i, m
+  endfor
+ endelse
 
  model=LoadGXmodel(ModelFileName)
  
@@ -185,7 +208,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   fixed_shifts=0
  endelse
 
- simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, ObsInfo.freq)       
+ simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, obsInfo.freq, $
+                          rot=(obsInfo.id eq 'RATAN') ? obsInfo.rot[0] : 0d0)       
  
  tstart0=systime(1)
  
@@ -216,7 +240,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
          freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ 
          ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
          obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-         modFlagArr, allQ, allMetrics, $
+         modFlagArr, allQ, allMetrics, instrument, $
          filename=fname, /compress
    
    print, 'The best fit Q for a=', a, ', b=', b, ' computed in ', systime(1)-tstart1, ' s'
@@ -266,9 +290,14 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
    ItotalMod[i, j, k]=ItotalModArr[k]
    CC[i, j, k]=CCarr[k]
    
-   m=obsImageArr.getmap(k)
-   if tag_exist(m, 'shiftX') then shiftX[i, j, k]=m.shiftX
-   if tag_exist(m, 'shiftY') then shiftY[i, j, k]=m.shiftY
+   if obsInfo.id eq 'RATAN' then begin
+    m=obsImageArr[k]
+    shiftX[i, j, k]=m.shiftX
+   endif else begin
+    m=obsImageArr.getmap(k)
+    if tag_exist(m, 'shiftX') then shiftX[i, j, k]=m.shiftX
+    if tag_exist(m, 'shiftY') then shiftY[i, j, k]=m.shiftY
+   endelse 
   endfor
  endfor 
  
@@ -276,7 +305,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
         (iso ? '_I': '_M')+ObsDateTime+'.sav'
  
  save, alist, blist, freqList, bestQ, ItotalObs, ItotalMod, CC, chi, rho, eta, metric, iso, threshold_img, $
-       modelFileName, EBTELfileName, DEM_on, DDM_on, MultiFreq_on, ObsID, shiftX, shiftY, fixed_shifts, $
+       modelFileName, EBTELfileName, DEM_on, DDM_on, MultiFreq_on, ObsID, shiftX, shiftY, fixed_shifts, instrument, $
        filename=fname1
  
  print, 'Done'

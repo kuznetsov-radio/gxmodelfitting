@@ -14,6 +14,8 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
  Nfreq=obsInfo.Nfreq
  freqList=obsInfo.freq
  
+ RATAN_on=obsInfo.id eq 'RATAN'
+ 
  Qgrid=[Qstart]
  fdone=[0]
  modImages=objarr(1)
@@ -44,9 +46,9 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
  IthrModArr=dblarr(Nfreq)  
  CCarr=dblarr(Nfreq) 
  modImageArr=obj_new('map')
- modImageConvArr=obj_new('map')
- obsImageArr=obj_new('map')
- obsImageSigmaArr=obj_new('map')
+ modImageConvArr=RATAN_on ? list() : obj_new('map')
+ obsImageArr=RATAN_on ? list() : obj_new('map')
+ obsImageSigmaArr=RATAN_on ? list() : obj_new('map')
  modFlagArr=lonarr(Nfreq, 6)
  
  bestQarr[*]=!values.d_NaN
@@ -78,66 +80,133 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     
    r=call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace)
                     
-   ConvertToMaps, outspace, simbox, model, modImaps, modVmaps
-   obj_destroy, modVmaps
+   ConvertToMaps, outspace, simbox, model, modImaps, modVmaps, flux=RATAN_on
+   if ~RATAN_on then obj_destroy, modVmaps
    modImages[i]=modImaps
    flags[i, *]=outspace.flagsCorona
    
-   modX=obj_new('map')
-   obsX=obj_new('map')
-   obsSX=obj_new('map')
+   if RATAN_on then begin
+    modX=list()
+    obsX=list()
+    obsSX=list()
+    
+    modL=obj_new('map')
+    modR=obj_new('map')
+    for j=0, Nfreq-1 do begin
+     modI=modImaps.getmap(j)
+     modV=modVmaps.getmap(j)
+
+     mR=modI
+     mR.data=(modI.data+modV.data)/2
+     modR->setmap, j, mR
+     mL=modI
+     mL.data=(modI.data-modV.data)/2
+     modL->setmap, j, mL  
+    endfor  
+    
+    asu_gxm_maplist2scans, modL, mScans_L, mXarc, out_index=out_index
+    asu_gxm_maplist2scans, modR, mScans_R, mXarc, out_index=out_index
+    mXarc-=out_index[0].xc
+    mScans=mScans_L+mScans_R
+    obj_destroy, modL
+    obj_destroy, modR
+    
+    for j=0, Nfreq-1 do begin
+     modI={flux: reform(mScans[*, j]), $
+           x: mXarc, $
+           freq: freqList[j]}
+     modX.add, modI        
+ 
+     _obsI=obsImaps[j]
+     _obsSigma=obsSImaps[j]
+     
+     if fixed_shifts then dx=xy_shift else FindShift1D, _obsI, modI, dx
+     ExtractSubProfile, _obsI, modI, dx, obsI
+     ExtractSubProfile, _obsSigma, modI, dx, obsSigma
+     obsX.add, obsI
+     obsSX.add, obsSI
+     
+     obsMax=max(obsI.flux)
+     modMax=max(modI.flux)    
+     ImaxObs[i, j]=obsMax
+     ImaxMod[i, j]=modMax
+     IthrObs[i, j]=obsMax*thr
+     IthrMod[i, j]=modMax*thr
+     
+     u=where(obsI.flux gt (obsMax*thr), ms)
+     maskObs=1d0*ms/n_elements(obsI.flux)
+    
+     u=where(modI.flux gt (modMax*thr), ms)
+     maskMod=1d0*ms/n_elements(modI.flux)    
+    
+     u=where((obsI.flux gt (obsMax*thr)) or (modI.flux gt (modMax*thr)), ms)
+     ItotalObs[i, j]=total(obsI.flux[u])*(obsI.x[1]-obsI.x[0])
+     ItotalMod[i, j]=total(modI.flux[u])*(modI.x[1]-modI.x[0])
+     CC[i, j]=c_correlate(obsI.flux[u], modI.flux[u], 0)
+    
+     chi[i, j]=mean(((modI.flux[u]-obsI.flux[u])/obsSigma.flux[u])^2)    ;\chi^2
+     rho[i, j]=mean((modI.flux[u]/obsI.flux[u]-1)^2)    ;\rho^2
+     eta[i, j]=mean(((modI.flux[u]-obsI.flux[u])/mean(obsI.flux[u]))^2)    ;\eta^2     
+    endfor
+    
+    obj_destroy, modVmaps
+   endif else begin
+    modX=obj_new('map')
+    obsX=obj_new('map')
+    obsSX=obj_new('map')
    
-   for j=0, Nfreq-1 do begin
-    modI=modImaps.getmap(j)
-    _obsI=obsImaps.getmap(j)
-    _obsSigma=obsSImaps.getmap(j)
+    for j=0, Nfreq-1 do begin
+     modI=modImaps.getmap(j)
+     _obsI=obsImaps.getmap(j)
+     _obsSigma=obsSImaps.getmap(j)
     
-    MakeLocalBeam, obsInfo, j, modI.dx, modI.dy, beam
-    FixLocalBeam, beam, simbox.Nx, simbox.Ny
-    modI.data=convol_fft(modI.data, beam)
-    modX->setmap, j, modI
+     MakeLocalBeam, obsInfo, j, modI.dx, modI.dy, beam
+     FixLocalBeam, beam, simbox.Nx, simbox.Ny
+     modI.data=convol_fft(modI.data, beam)
+     modX->setmap, j, modI
     
-    if fixed_shifts then begin
-     dx=xy_shift[0]
-     dy=xy_shift[1]
-    endif else FindShift, _obsI, modI, dx, dy
-    ExtractSubmap, _obsI, modI, dx, dy, _obsI.id, obsI
-    obsI=create_struct('shiftX', dx, $
-                       'shiftY', dy, $
-                       obsI)
-    ExtractSubmap, _obsSigma, modI, dx, dy, _obsI.id+' sigma', obsSigma
-    obsX->setmap, j, obsI
-    obsSX->setmap, j, obsSigma
+     if fixed_shifts then begin
+      dx=xy_shift[0]
+      dy=xy_shift[1]
+     endif else FindShift, _obsI, modI, dx, dy
+     ExtractSubmap, _obsI, modI, dx, dy, _obsI.id, obsI
+     obsI=create_struct('shiftX', dx, $
+                        'shiftY', dy, $
+                        obsI)
+     ExtractSubmap, _obsSigma, modI, dx, dy, _obsI.id+' sigma', obsSigma
+     obsX->setmap, j, obsI
+     obsSX->setmap, j, obsSigma
     
-    obsMax=GetSmoothedMax(obsI, obsInfo.sx[j], obsInfo.sy[j])
-    modMax=max(modI.data)    
-    ImaxObs[i, j]=obsMax
-    ImaxMod[i, j]=modMax
-    IthrObs[i, j]=obsMax*thr
-    IthrMod[i, j]=modMax*thr
+     obsMax=GetSmoothedMax(obsI, obsInfo.sx[j], obsInfo.sy[j])
+     modMax=max(modI.data)    
+     ImaxObs[i, j]=obsMax
+     ImaxMod[i, j]=modMax
+     IthrObs[i, j]=obsMax*thr
+     IthrMod[i, j]=modMax*thr
     
-    u=where(obsI.data gt (obsMax*thr), ms)
-    maskObs=1d0*ms/n_elements(obsI.data)
+     u=where(obsI.data gt (obsMax*thr), ms)
+     maskObs=1d0*ms/n_elements(obsI.data)
     
-    u=where(modI.data gt (modMax*thr), ms)
-    maskMod=1d0*ms/n_elements(modI.data)    
+     u=where(modI.data gt (modMax*thr), ms)
+     maskMod=1d0*ms/n_elements(modI.data)    
     
-    u=where((obsI.data gt (obsMax*thr)) or (modI.data gt (modMax*thr)), ms)
-    ItotalObs[i, j]=total(obsI.data[u])*obsI.dx*obsI.dy
-    ItotalMod[i, j]=total(modI.data[u])*modI.dx*modI.dy
-    CC[i, j]=c_correlate(obsI.data[u], modI.data[u], 0)
+     u=where((obsI.data gt (obsMax*thr)) or (modI.data gt (modMax*thr)), ms)
+     ItotalObs[i, j]=total(obsI.data[u])*obsI.dx*obsI.dy
+     ItotalMod[i, j]=total(modI.data[u])*modI.dx*modI.dy
+     CC[i, j]=c_correlate(obsI.data[u], modI.data[u], 0)
     
-    chi[i, j]=mean(((modI.data[u]-obsI.data[u])/obsSigma.data[u])^2)    ;\chi^2
-    rho[i, j]=mean((modI.data[u]/obsI.data[u]-1)^2)    ;\rho^2
-    eta[i, j]=mean(((modI.data[u]-obsI.data[u])/mean(obsI.data[u]))^2)    ;\eta^2
+     chi[i, j]=mean(((modI.data[u]-obsI.data[u])/obsSigma.data[u])^2)    ;\chi^2
+     rho[i, j]=mean((modI.data[u]/obsI.data[u]-1)^2)    ;\rho^2
+     eta[i, j]=mean(((modI.data[u]-obsI.data[u])/mean(obsI.data[u]))^2)    ;\eta^2
         
-    if (maskMod gt 0.99) || ((maskMod/maskObs) gt 4) then begin
-     if exist(loud) then print, '*** GR contribution is too low at ', freqList[j], ' GHz ***'
-     chi[i, j]=!values.d_NaN
-     rho[i, j]=!values.d_NaN
-     eta[i, j]=!values.d_NaN
-    endif
-   endfor
+     if (maskMod gt 0.99) || ((maskMod/maskObs) gt 4) then begin
+      if exist(loud) then print, '*** GR contribution is too low at ', freqList[j], ' GHz ***'
+      chi[i, j]=!values.d_NaN
+      rho[i, j]=!values.d_NaN
+      eta[i, j]=!values.d_NaN
+     endif
+    endfor
+   endelse
    
    case metric of
     'chi': mtr=chi
@@ -371,9 +440,9 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     
     r=call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace)
                     
-    ConvertToMaps, outspace, simbox, model, modImaps, modVmaps
-    obj_destroy, modVmaps
-    
+    ConvertToMaps, outspace, simbox, model, modImaps, modVmaps, flux=RATAN_on
+    if ~RATAN_on then obj_destroy, modVmaps
+        
     chi_x=dblarr(Nfreq)
     rho_x=dblarr(Nfreq)
     eta_x=dblarr(Nfreq)
@@ -384,49 +453,110 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     IthrObs_x=dblarr(Nfreq)
     IthrMod_x=dblarr(Nfreq)        
     CC_x=dblarr(Nfreq)
+
+    if RATAN_on then begin
+     modX=list()
+     obsX=list()
+     obsSX=list()
     
-    modX=obj_new('map')
-    obsX=obj_new('map')
-    obsSX=obj_new('map')
+     modL=obj_new('map')
+     modR=obj_new('map')
+     for k=0, Nfreq-1 do begin
+      modI=modImaps.getmap(k)
+      modV=modVmaps.getmap(k)
+
+      mR=modI
+      mR.data=(modI.data+modV.data)/2
+      modR->setmap, k, mR
+      mL=modI
+      mL.data=(modI.data-modV.data)/2
+      modL->setmap, k, mL  
+     endfor  
     
-    for k=0, Nfreq-1 do begin
-     modI=modImaps.getmap(k)
-     _obsI=obsImaps.getmap(k)
-     _obsSigma=obsSImaps.getmap(k)
+     asu_gxm_maplist2scans, modL, mScans_L, mXarc, out_index=out_index
+     asu_gxm_maplist2scans, modR, mScans_R, mXarc, out_index=out_index
+     mXarc-=out_index[0].xc
+     mScans=mScans_L+mScans_R
+     obj_destroy, modL
+     obj_destroy, modR
     
-     MakeLocalBeam, obsInfo, k, modI.dx, modI.dy, beam
-     FixLocalBeam, beam, simbox.Nx, simbox.Ny
-     modI.data=convol_fft(modI.data, beam)
-     modX->setmap, k, modI
+     for k=0, Nfreq-1 do begin
+      modI={flux: reform(mScans[*, k]), $
+            x: mXarc, $
+            freq: freqList[k]}
+      modX.add, modI        
+ 
+      _obsI=obsImaps[k]
+      _obsSigma=obsSImaps[k]
+     
+      if fixed_shifts then dx=xy_shift else FindShift1D, _obsI, modI, dx
+      ExtractSubProfile, _obsI, modI, dx, obsI
+      ExtractSubProfile, _obsSigma, modI, dx, obsSigma
+      obsX.add, obsI
+      obsSX.add, obsSI
+     
+      obsMax=max(obsI.flux)
+      modMax=max(modI.flux)    
+      ImaxObs_x[k]=obsMax
+      ImaxMod[k]=modMax
+      IthrObs_x[k]=obsMax*thr
+      IthrMod_x[k]=modMax*thr
+     
+      u=where((obsI.flux gt (obsMax*thr)) or (modI.flux gt (modMax*thr)), ms)
+      ItotalObs_x[k]=total(obsI.flux[u])*(obsI.x[1]-obsI.x[0])
+      ItotalMod_x[k]=total(modI.flux[u])*(modI.x[1]-modI.x[0])
+      CC_x[k]=c_correlate(obsI.flux[u], modI.flux[u], 0)
     
-     if fixed_shifts then begin
-      dx=xy_shift[0]
-      dy=xy_shift[1]
-     endif else FindShift, _obsI, modI, dx, dy
-     ExtractSubmap, _obsI, modI, dx, dy, _obsI.id, obsI
-     obsI=create_struct('shiftX', dx, $
-                        'shiftY', dy, $
-                        obsI)
-     ExtractSubmap, _obsSigma, modI, dx, dy, _obsI.id+' sigma', obsSigma
-     obsX->setmap, k, obsI
-     obsSX->setmap, k, obsSigma
+      chi_x[k]=mean(((modI.flux[u]-obsI.flux[u])/obsSigma.flux[u])^2)    ;\chi^2
+      rho_x[k]=mean((modI.flux[u]/obsI.flux[u]-1)^2)    ;\rho^2
+      eta_x[k]=mean(((modI.flux[u]-obsI.flux[u])/mean(obsI.flux[u]))^2)    ;\eta^2     
+     endfor
     
-     obsMax=GetSmoothedMax(obsI, obsInfo.sx[k], obsInfo.sy[k])
-     modMax=max(modI.data)    
-     ImaxObs_x[k]=obsMax
-     ImaxMod_x[k]=modMax
-     IthrObs_x[k]=obsMax*thr
-     IthrMod_x[k]=modMax*thr
+     obj_destroy, modVmaps
+    endif else begin    
+     modX=obj_new('map')
+     obsX=obj_new('map')
+     obsSX=obj_new('map')
     
-     u=where((obsI.data gt (obsMax*thr)) or (modI.data gt (modMax*thr)), ms)
-     ItotalObs_x[k]=total(obsI.data[u])*obsI.dx*obsI.dy
-     ItotalMod_x[k]=total(modI.data[u])*modI.dx*modI.dy
-     CC_x[k]=c_correlate(obsI.data[u], modI.data[u], 0)
+     for k=0, Nfreq-1 do begin
+      modI=modImaps.getmap(k)
+      _obsI=obsImaps.getmap(k)
+      _obsSigma=obsSImaps.getmap(k)
+    
+      MakeLocalBeam, obsInfo, k, modI.dx, modI.dy, beam
+      FixLocalBeam, beam, simbox.Nx, simbox.Ny
+      modI.data=convol_fft(modI.data, beam)
+      modX->setmap, k, modI
+    
+      if fixed_shifts then begin
+       dx=xy_shift[0]
+       dy=xy_shift[1]
+      endif else FindShift, _obsI, modI, dx, dy
+      ExtractSubmap, _obsI, modI, dx, dy, _obsI.id, obsI
+      obsI=create_struct('shiftX', dx, $
+                         'shiftY', dy, $
+                         obsI)
+      ExtractSubmap, _obsSigma, modI, dx, dy, _obsI.id+' sigma', obsSigma
+      obsX->setmap, k, obsI
+      obsSX->setmap, k, obsSigma
+    
+      obsMax=GetSmoothedMax(obsI, obsInfo.sx[k], obsInfo.sy[k])
+      modMax=max(modI.data)    
+      ImaxObs_x[k]=obsMax
+      ImaxMod_x[k]=modMax
+      IthrObs_x[k]=obsMax*thr
+      IthrMod_x[k]=modMax*thr
+    
+      u=where((obsI.data gt (obsMax*thr)) or (modI.data gt (modMax*thr)), ms)
+      ItotalObs_x[k]=total(obsI.data[u])*obsI.dx*obsI.dy
+      ItotalMod_x[k]=total(modI.data[u])*modI.dx*modI.dy
+      CC_x[k]=c_correlate(obsI.data[u], modI.data[u], 0)
           
-     chi_x[k]=mean(((modI.data[u]-obsI.data[u])/obsSigma.data[u])^2)    ;\chi^2
-     eta_x[k]=mean(((modI.data[u]-obsI.data[u])/mean(obsI.data[u]))^2)    ;\eta^2
-     rho_x[k]=mean((modI.data[u]/obsI.data[u]-1)^2)    ;\rho^2
-    endfor 
+      chi_x[k]=mean(((modI.data[u]-obsI.data[u])/obsSigma.data[u])^2)    ;\chi^2
+      eta_x[k]=mean(((modI.data[u]-obsI.data[u])/mean(obsI.data[u]))^2)    ;\eta^2
+      rho_x[k]=mean((modI.data[u]/obsI.data[u]-1)^2)    ;\rho^2
+     endfor 
+    endelse
     
     l=(Qx gt Qb) ? ib : ib-1
     
@@ -529,29 +659,54 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
   bmap=modImages[ib]
   m=bmap.getmap(j)
   modImageArr->setmap, j, m
-  bmap=modImagesConv[ib]
-  m=bmap.getmap(j)
-  modImageConvArr->setmap, j, m
-  bmap=obsImages[ib]
-  m=bmap.getmap(j)
-  obsImageArr->setmap, j, m
-  bmap=obsImagesSigma[ib]
-  m=bmap.getmap(j)
-  obsImageSigmaArr->setmap, j, m     
+  
+  if RATAN_on then begin
+   bmap=modImagesConv[ib]
+   m=bmap[j]
+   modImageConvArr.add, m
+   bmap=obsImages[ib]
+   m=bmap[j]
+   obsImageArr.add, m
+   bmap=obsImagesSigma[ib]
+   m=bmap[j]
+   obsImageSigmaArr.add, m
+  endif else begin
+   bmap=modImagesConv[ib]
+   m=bmap.getmap(j)
+   modImageConvArr->setmap, j, m
+   bmap=obsImages[ib]
+   m=bmap.getmap(j)
+   obsImageArr->setmap, j, m
+   bmap=obsImagesSigma[ib]
+   m=bmap.getmap(j)
+   obsImageSigmaArr->setmap, j, m
+  endelse     
  endif else begin
   bmap=modImages[0]
   m=bmap.getmap(j)
   m.data[*]=0
   modImageArr->setmap, j, m
-  modImageConvArr->setmap, j, m
   
-  _obsI=obsImaps.getmap(j)
-  ExtractSubmap, _obsI, m, 0, 0, _obsI.id, obsI
-  obsImageArr->setmap, j, obsI
-  
-  _obsSI=obsSImaps.getmap(j)
-  ExtractSubmap, _obsSI, m, 0, 0, _obsSI.id, obsSI
-  obsImageSigmaArr->setmap, j, obsSI  
+  if RATAN_on then begin
+   bmap=modImagesConv[0]
+   m=bmap[j]
+   m.flux[*]=0
+   modImageConvArr.add, m
+   _obsI=obsImaps[j]
+   ExtractSubProfile, _obsI, m, 0, obsI
+   obsImageArr.add, obsI
+   _obsSI=obsSImaps[j]
+   ExtractSubProfile, _obsSI, m, 0, obsSI
+   obsImageSigmaArr.add, obsSI
+  endif else begin
+   modImageConvArr->setmap, j, m
+   _obsI=obsImaps.getmap(j)
+   ExtractSubmap, _obsI, m, 0, 0, _obsI.id, obsI
+   obsImageArr->setmap, j, obsI
+   _obsSI=obsSImaps.getmap(j)
+   ExtractSubmap, _obsSI, m, 0, 0, _obsSI.id, obsSI
+   obsImageSigmaArr->setmap, j, obsSI  
+  endelse
  endelse
  
  allQ=Qgrid
@@ -577,6 +732,8 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
  else begin
   Nfreq=obsInfo.Nfreq
   
+  RATAN_on=obsInfo.id eq 'RATAN'
+  
   bestQarr=dblarr(Nfreq)
   chiArr=dblarr(Nfreq)
   rhoArr=dblarr(Nfreq)
@@ -589,25 +746,36 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
   IthrModArr=dblarr(Nfreq)    
   CCarr=dblarr(Nfreq) 
   modImageArr=obj_new('map')
-  modImageConvArr=obj_new('map')
-  obsImageArr=obj_new('map')
-  obsImageSigmaArr=obj_new('map')
+  modImageConvArr=RATAN_on ? list() : obj_new('map')
+  obsImageArr=RATAN_on ? list() : obj_new('map')
+  obsImageSigmaArr=RATAN_on ? list() : obj_new('map')
   modFlagArr=lonarr(Nfreq, 6)
   
   for i=0, Nfreq-1 do begin
-   simbox_loc=MakeSimulationBox(simbox.xc, simbox.yc, simbox.dx, simbox.dy, simbox.Nx, simbox.Ny, ObsInfo.freq[i]) 
-   obsImaps_loc=obj_new('map')
-   m=obsImaps.getmap(i)
-   obsImaps_loc->setmap, 0, m
-   obsSImaps_loc=obj_new('map')
-   m=obsSImaps.getmap(i)
-   obsSImaps_loc->setmap, 0, m
-   psf_loc=obsInfo.psf
-   psf_loc=psf_loc[i]
-   psf_loc=list(psf_loc)
-   obsInfo_loc={id: ' ', $
-                Nfreq: 1, freq: obsInfo.freq[i], sx: obsInfo.sx[i], sy: obsInfo.sy[i], $
-                psf_dx: obsInfo.psf_dx[i], psf_dy: obsInfo.psf_dy[i], psf: psf_loc}
+   simbox_loc=MakeSimulationBox(simbox.xc, simbox.yc, simbox.dx, simbox.dy, simbox.Nx, simbox.Ny, obsInfo.freq[i], $
+                                rot=RATAN_on ? obsInfo.rot[i] : 0d0) 
+   if RATAN_on then begin
+    obsImaps_loc=list()
+    m=obsImaps[i]
+    obsImaps_loc.add, m
+    obsSImaps_loc=list()
+    m=obsSImaps[i]
+    obsSImaps_loc.add, m
+    obsInfo_loc={id: 'RATAN', Nfreq: 1, freq: obsInfo.freq[i], rot: obsInfo.rot[i]}
+   endif else begin                             
+    obsImaps_loc=obj_new('map')
+    m=obsImaps.getmap(i)
+    obsImaps_loc->setmap, 0, m
+    obsSImaps_loc=obj_new('map')
+    m=obsSImaps.getmap(i)
+    obsSImaps_loc->setmap, 0, m
+    psf_loc=obsInfo.psf
+    psf_loc=psf_loc[i]
+    psf_loc=list(psf_loc)
+    obsInfo_loc={id: ' ', $
+                 Nfreq: 1, freq: obsInfo.freq[i], sx: obsInfo.sx[i], sy: obsInfo.sy[i], $
+                 psf_dx: obsInfo.psf_dx[i], psf_dy: obsInfo.psf_dy[i], psf: psf_loc}
+   endelse             
                 
    FindBestFitQmf, libname, model, ebtel, simbox_loc, obsImaps_loc, obsSImaps_loc, obsInfo_loc, $ 
                    a, b, Qstart, Qstep, iso, thr, metric, fixed_shifts, xy_shift, $         
@@ -629,12 +797,21 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
    CCarr[i]=CCarr_loc 
    m=modImageArr_loc.getmap(0)
    modImageArr->setmap, i, m
-   m=modImageConvArr_loc.getmap(0)
-   modImageConvArr->setmap, i, m
-   m=obsImageArr_loc.getmap(0)
-   obsImageArr->setmap, i, m
-   m=obsImageSigmaArr_loc.getmap(0)
-   obsImageSigmaArr->setmap, i, m   
+   if RATAN_on then begin
+    m=modImageConvArr_loc[0]
+    modImageConvArr.add, m
+    m=obsImageArr_loc[0]
+    obsImageArr.add, m
+    m=obsImageSigmaArr_loc[0]
+    obsImageSigmaArr.add, m
+   endif else begin
+    m=modImageConvArr_loc.getmap(0)
+    modImageConvArr->setmap, i, m
+    m=obsImageArr_loc.getmap(0)
+    obsImageArr->setmap, i, m
+    m=obsImageSigmaArr_loc.getmap(0)
+    obsImageSigmaArr->setmap, i, m
+   endelse   
    modFlagArr[i, *]=modFlagArr[0, *]
   endfor
   
