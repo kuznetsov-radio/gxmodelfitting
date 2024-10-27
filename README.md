@@ -13,7 +13,8 @@ Here, we repeat the headers of the above-mentioned routines with the description
 pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, alist, blist, xc, yc, dx, dy, Nx, Ny [, RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM, Qstep=Qstep, xy_shift=xy_shift, loud=loud]
 
 Input parameters:<br/>
-RefDir - the directory where the observed radio maps/profiles are stored. If the parameter RefFiles is omitted, the program loads all \*.sav files in the RefDir directory. Otherwise, the program loads the file(s) specified by RefDir+RefFiles. For general 2D radio maps, each .sav file should contain a 'ref' map object with three maps:<br/>
+RefDir - the directory where the observed radio maps/profiles are stored. If the parameter RefFiles is omitted, the program loads all \*.sav files in the RefDir directory. Otherwise, the program loads the file(s) specified by RefDir+RefFiles.<br/> 
+For general 2D radio maps, each .sav file should contain a 'ref' map object with three maps:<br/>
 I_obs=ref.getmap(0) - the observed radio map (in terms of brightness temperature in K), with the tags I_obs.freq specifying the emission frequency in GHz, and I_obs.id specifying the map title,<br/>
 sigma=ref.getmap(1) - the corresponding instrumental noise (with the same dimensions as I_obs),<br/>
 beam =ref.getmap(2) - the instrument beam (point-spread function), with the tags beam.a_beam and beam.b_beam specifying the beam half-widths at 1/e level in two ortogonal directions, in arcseconds.<br/>
@@ -37,7 +38,7 @@ dx, dy - x and y resolutions (pixel sizes) of the model map, in arcseconds.<br/>
 Nx, Ny - x and y sizes of the model map, in pixels.<br/>
 
 The optional parameters include:<br/>
-RefFiles - if specified, the program loads the observed radio maps from the files given by RefDir+RefFiles. Default: all \*.sav files in the RefDir directory.<br/>
+RefFiles - if specified, the program loads the observed radio maps/profiles from the files given by RefDir+RefFiles. Default: all \*.sav files in the RefDir directory.<br/>
 Q0start - the initial value of Q0. It can be either: a scalar value (applied to all a an b), or a 2D N_a\*N_b array, where N_a and N_b are the sizes of alist and blist arrays. Default: the best-fit Q0 parameters for AR 12924 (extrapolated to the specified a and b) will be used.<br/>
 threshold - the threshold value to compute the image mask. Comparison of the model and observed radio maps is performed in the area where (I_obs gt threshold\*max(I_obs)) || (I_mod gt threshold\*max(I_mod)). Default: 0.1.<br/>
 metric - the metric to minimize. It can be one of the following three options:<br/>
@@ -75,11 +76,20 @@ If the Summary\*.sav file exists, it will be overwritten.
 pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileName, OutDir, xc, yc, dx, dy, Nx, Ny, a_start, b_start, da, db [, Q0start=Q0start, metric=metric, threshold_img=threshold_img, threshold_metric=threshold_metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, xy_shift=xy_shift, loud=loud]
 
 Input parameters:<br/>
-RefFileName - name of the .sav file that contains the observed radio maps (at a single frequency). The file should contain a 'ref' map object with three maps:<br/>
-I_obs=ref.getmap(0) - the observed radio map, with the tags I_obs.freq specifying the emission frequency in GHz, and I_obs.id specifying the map title,<br/>
+RefFileName - name of the .sav file that contains the observed radio map/profile (at a single frequency).<br/> 
+The file should contain a 'ref' map object with three maps:<br/>
+I_obs=ref.getmap(0) - the observed radio map (in terms of brightness temperature in K), with the tags I_obs.freq specifying the emission frequency in GHz, and I_obs.id specifying the map title,<br/>
 sigma=ref.getmap(1) - the corresponding instrumental noise (with the same dimensions as I_obs),<br/>
 beam =ref.getmap(2) - the instrument beam (point-spread function), with the tags beam.a_beam and beam.b_beam specifying the beam half-widths at 1/e level in two ortogonal directions, in arcseconds.<br/>
 Other required tags of these maps are standard for the SSW map structure.<br/>
+For 1D intensity profiles observed by RATAN-600, the .sav file should contain two fields:<br/>
+instrument='RATAN' - the label to identify the data format,<br/>
+ref={flux, x, freq, time, rot} - the structure specifying the data, i.e.,<br/>
+flux - the intensity profile, 1D array, in units of sfu/arcsec,<br/>
+x - the corresponding coordinates, 1D array, in arcsec,<br/>
+freq - the emission frequency, in GHz,<br/>
+time - the observation time, string (the same as in SSW map structures),<br/>
+rot - the RATAN positional angle, in degrees.<br/>
 ModelFileName - name of the .sav file that contains the GX Simulator model.<br/>
 EBTELfileName - name of the .sav file that contains the EBTEL table.<br/>
 LibFileName - name of the appropriate executable library that computes the radio emission (see https://github.com/kuznetsov-radio/gximagecomputing).<br/>
@@ -106,7 +116,7 @@ DEM, DDM - these keywords are only applicable if the chosen EBTELfileName .sav f
 a_range, b_range - the allowed ranges of the a and b indices, 2-element arrays. The search for the best fit is performed in the range of a_range[0] < a < a_range[1], b_range[0] < b < b_range[1].  Default: a_range=[-10, 10], b_range=[-10, 10]. Note that you cannot extend the a and b ranges beyond the default values, due to the limitations related to the file-naming convention.<br/>
 noArea - if set, the area of good agreement (within the threshold_metric threshold) is not computed, i.e., the code stops after finding the local minimum. Default: 0 (the area of good agreement is computed).<br/>
 Qstep - the initial relative step over Q0 to search for the optimal heating rate value (must be >1). Default: the golden ratio value (1.6180339).<br/>
-xy_shift - shifts applied to the observed microwave map, a 2-element vector in the form of xy_shift=[dx, dy], in arcseconds. If this parameter is not specified (by default), the shifts are computed automatically each time (i.e., for each frequency and a, b, and Q0 values) to provide the maximum correlation between the observed and model images.<br/>
+xy_shift - shift applied to the observed microwave map/profile, a 2-element vector in the form of xy_shift=[dx, dy] (for 2D maps), or a scalar value (for 1D profiles), in arcseconds.  If this parameter is not specified (by default), the shift is computed automatically each time (i.e., for each frequency and a, b, and Q0 values) to provide the maximum correlation between the observed and model images/profiles. <br/>
 loud - if set, the code displays more detailed information when it fails to find a solution (e.g., when the minimization procedure goes beyond the EBTEL table).
 
 Results:<br/>
@@ -116,7 +126,7 @@ freqList - 1-element array containing the emission frequency, in GHz.<br/>
 bestQ - 3D array (N_a\*N_b\*1, where N_a and N_b are the sizes of the alist and blist arrays, respectively) of the obtained best-fit heating rates Q0 at different values of a and b.<br/>
 ItotalObs, ItotalMod - 3D arrays (N_a\*N_b\*1) of the total observed and model radio fluxes at different values of a and b. The fluxes correspond to the obtained best-fit Q0 values.<br/>
 CC - 3D array (N_a\*N_b\*1) of the correlation coefficients of the observed and model radio maps at different values of a and b. The coefficients correspond to the obtained best-fit Q0 values.<br/>
-shiftX, shiftY - 3D arrays (N_a\*N_b\*1) of the shifts (in arcseconds) applied to the observed radio maps to obtain the best correlation with the model maps, at different values of a, b, and frequency. The shifts correspond to the obtained best-fit Q0 values.<br/>
+shiftX, shiftY - 3D arrays (N_a\*N_b\*1) of the shifts (in arcseconds) applied to the observed radio maps to obtain the best correlation with the model maps, at different values of a, b, and frequency. The shifts correspond to the obtained best-fit Q0 values. If the input is in the form of 1D profiles, shiftY is always zero.<br/>
 rho, chi, eta - 3D arrays (N_a\*N_b\*1) of the obtained rho^2, chi^2, and eta^2 metrics at different values of a and b. Note that only one of those metrics (defined by the 'metric' keyword) is actually minimized; two other metrics correspond to the obtained best-fit Q0 values.<br/>
 Note, that if the algorithm has failed to find the best-fit heating rate Q0 at a certain combination of a and b (e.g., the used metric has no minimum within the valid Q0 range, or has more than one local minimum), the corresponding bestQ, ItotalMod, CC, rho, chi, and eta are set to NaN.<br/>
 If the data for a certain combination of a and b are missing (because the search for the best-fit Q0 is performed only within a subset of the rectangular area determined by the regular grids alist and blist), the corresponding bestQ, ItotalMod, CC, rho, chi, and eta are set to -1. Therefore, when  analyzing the results, only the points where bestQ is finite and bestQ>0 should be considered. If the Summary\*.sav file exists, it will be overwritten.<br/>
@@ -125,7 +135,8 @@ freqList - 1-element array containing the emission frequency, in GHz.<br/>
 bestQarr - 1-element array containing the obtained best-fit heating rate Q0.<br/>
 rhoArr, chiArr, etaArr -1-element arrays containing the obtained rho^2, chi^2, and eta^2 metrics. Note that only one of those metrics (defined by the 'metric' keyword) is actually minimized; two other metrics correspond to the obtained best-fit Q0 values.<br/>
 modImageArr - map object containing the best-fit model radio map (corresponding to the best-fit heating rate Q0). The map is not convolved with the instrument beam.<br/>
-modImageConvArr - map object containing the above-mentioned best-fit model radio map convolved with the instrument beam.<br/>
-obsImageArr - map object containing the observed radio map rebinned and shifted to match the best-fit model map.<br/>
+modImageConvArr - if the input is in form of 2D map, this is a map object containing the above-mentioned best-fit model radio map convolved with the instrument beam.<br/>
+obsImageArr - if the input is in form of 2D map, this is a map object containing the observed radio map rebinned and shifted to match the best-fit model map.<br/>
+If the input is in the form of 1D profile, the fields modImageConvArr and obsImageArr are (1-element) lists of structures (in the same format as described above) specifying the model 1D scans and the observed 1D scans rebinned and shifted to match the models, respectively.<br/>
 If the algorithm failed to find the best-fit heating rate (e.g., the used metric has no minimum within the valid Q0 range, or has more than one local minimum), the corresponding bestQarr, rhoArr, chiArr, and etaArr are set to NaN, and the corresponding image maps contain all zeros.<br/>
 Note: the program does not overwrite the existing fit\*.sav files. If the program is interrupted, on the next launch it will compute the results only for those (a, b) values that have not been processed before.
