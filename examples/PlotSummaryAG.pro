@@ -1,5 +1,5 @@
 pro PlotSummaryAG
- restore, 'C:\MCloud\CoronalMW\AR-SRH\Data\Images\SRH\mid\DDM_SS\Summary_eta_thr0.100_M_20230528_0355_05.80GHz.sav'
+ restore, 'C:\MCloud\CoronalMW\AR-SRH\Data\Images\SRH\mid\DDM_SS\Summary_eta_thr0.100_M_20220109_0535_07.80GHz.sav'
  threshold_metric=2.0
  
  ;------------------------------------------------------------------
@@ -34,6 +34,8 @@ pro PlotSummaryAG
   ymax=max(y[u])+dy
   m=get_sub_map(m, xrange=[xmin, xmax], yrange=[ymin, ymax])
   m0=get_sub_map(m0, xrange=[xmin, xmax], yrange=[ymin, ymax])
+  print, xmin, xmax
+  print, ymin, ymax
   
   xsize=8.0
   yw=7.0*(ymax-ymin+dy)/(xmax-xmin+dx)
