@@ -104,9 +104,10 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
      modL->setmap, j, mL  
     endfor  
     
-    asu_gxm_maplist2scans, modL, mScans_L, mXarc, out_index=out_index
-    asu_gxm_maplist2scans, modR, mScans_R, mXarc, out_index=out_index
-    mXarc-=out_index[0].xc
+    asu_gxm_maplist2scans, modL, mScans_L, mXarc
+    asu_gxm_maplist2scans, modR, mScans_R, mXarc
+    _obsI=obsImaps[0]
+    mXarc+=(simbox.xc*cos(_obsI.pos*!dpi/180)+simbox.yc*sin(_obsI.pos*!dpi/180)-simbox.xc)
     mScans=mScans_L+mScans_R
     obj_destroy, modL
     obj_destroy, modR
@@ -475,7 +476,8 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     
      asu_gxm_maplist2scans, modL, mScans_L, mXarc, out_index=out_index
      asu_gxm_maplist2scans, modR, mScans_R, mXarc, out_index=out_index
-     mXarc-=out_index[0].xc
+     _obsI=obsImaps[0]
+     mXarc+=(simbox.xc*cos(_obsI.pos*!dpi/180)+simbox.yc*sin(_obsI.pos*!dpi/180)-simbox.xc)
      mScans=mScans_L+mScans_R
      obj_destroy, modL
      obj_destroy, modR
