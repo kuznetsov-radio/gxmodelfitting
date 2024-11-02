@@ -1,13 +1,18 @@
-pro ConvertNoRH
- obsDir='C:\MCloud\CoronalMW\AR-SRH\Data\NoRH\'
- flist=['ifa140202_022005', 'ifz140202_022005']
-        
- Nfreq=n_elements(flist)
+pro ConvertNoRH, InDir, InFiles
+;This program converts the Nobeyama Radioheliograph data (fits format, no file extension by default) 
+;into .sav reference files accepted by the CHMP routines.
+;Input parameters:
+; InDir - the directory where the input files are located.
+; InFiles - array of the input file names.
+;Output: the program creates .sav files in the same InDir directory, with the same names as specified by InFiles,
+;but with '.sav' extension added.
+
+ Nfreq=n_elements(InFiles)
  
  for i=0, Nfreq-1 do begin
   ref=obj_new('map')
   
-  fname=obsDir+flist[i]
+  fname=InDir+InFiles[i]
   fits2map, fname, obsI
   norh_rd_img, fname, index, data
   
@@ -27,7 +32,7 @@ pro ConvertNoRH
   ref->setmap, 1, obsSigma
   ref->setmap, 2, psf
   
-  fname1=obsDir+flist[i]+'.sav'
+  fname1=InDir+InFiles[i]+'.sav'
   save, ref, filename=fname1, /compress
  endfor
 end

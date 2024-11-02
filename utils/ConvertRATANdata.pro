@@ -1,9 +1,10 @@
-pro ConvertRATANdata
- fname='C:\MCloud\CoronalMW\AR-SRH\Data\RATAN\RATAN_AR12723_20180930_090339_az0_SCANS__lin_appr.dat'
- 
- ;----------------------------------------------------------
- 
- rtu_read_scans, fname, scans_R, scans_L, xarc, freqs, pos_angle, index=index
+pro ConvertRATANdata, InFile
+;This program converts the RATAN data (.dat) into .sav reference files accepted by the CHMP routines.
+;Input parameter: 
+; InFile - name of the RATAN data file (.dat).
+;Output: the program creates .sav files in the current directory, one file per frequency channel.
+
+ rtu_read_scans, InFile, scans_R, scans_L, xarc, freqs, pos_angle, index=index
  if index.shift_hmi ne 0 then xarc+=index.shift_hmi
  xarc-=index.xc
  scans=scans_L+scans_R
