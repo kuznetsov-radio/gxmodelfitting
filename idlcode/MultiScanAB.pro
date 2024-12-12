@@ -148,6 +148,9 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;                  actually minimized; two other metrics correspond to the obtained best-fit Q0 values. 
 ; If the Summary*.sav file exists, it will be overwritten.
 
+ if RefDir ne '' then RefDir=file_dirname(RefDir+path_sep()+'*', /mark_directory)
+ if OutDir ne '' then OutDir=file_dirname(OutDir+path_sep()+'*', /mark_directory)
+
  if exist(RefFiles) then ObsFileNames=RefDir+RefFiles else ObsFileNames=file_search(RefDir+'*.sav')
  LoadObservations, ObsFileNames, obsImaps, obsSImaps, obsInfo
  instrument=obsInfo.id

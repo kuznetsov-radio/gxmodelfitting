@@ -409,6 +409,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
            
  tstart0=systime(1)    
 
+ if OutDir ne '' then OutDir=file_dirname(OutDir+path_sep()+'*', /mark_directory)
+
  LoadObservations, RefFileName, obsImaps, obsSImaps, obsInfo
  instrument=obsInfo.id
  if obsInfo.id eq 'RATAN' then begin
