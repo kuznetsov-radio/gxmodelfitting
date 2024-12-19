@@ -4,7 +4,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
                     ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ ;output
                     obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ ;output
                     modFlagArr, allQ, allMetrics, $ ;extra output
-                    loud=loud
+                    loud=loud, SHtable=SHtable
  forward_function GetSmoothedMax, DefineCoronaParms, ReserveOutputSpace, ConvertToMaps
                        
  acc=1d-2 ;desired accuracy
@@ -78,7 +78,8 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
    coronaparms=DefineCoronaParams(Tbase, nbase, Qgrid[i], a, b, force_isothermal=iso)
    outspace=ReserveOutputSpace(simbox)
     
-   r=call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace)
+   r=exist(SHtable) ? call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace, SHtable) : $
+                      call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace)
                     
    ConvertToMaps, outspace, simbox, model, modImaps, modVmaps, flux=RATAN_on
    if ~RATAN_on then obj_destroy, modVmaps
@@ -439,7 +440,8 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     coronaparms=DefineCoronaParams(Tbase, nbase, Qx, a, b, force_isothermal=iso)
     outspace=ReserveOutputSpace(simbox)
     
-    r=call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace)
+   r=exist(SHtable) ? call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace, SHtable) : $
+                      call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace)
                     
     ConvertToMaps, outspace, simbox, model, modImaps, modVmaps, flux=RATAN_on
     if ~RATAN_on then obj_destroy, modVmaps
@@ -721,7 +723,7 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                   ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ ;output
                   obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ ;output
                   modFlagArr, allQ, allMetrics, $ ;extra output
-                  loud=loud
+                  loud=loud, SHtable=SHtable
  forward_function MakeSimulationBox
 
  if MultiFreq_on then $
@@ -730,7 +732,7 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                   freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $           
                   ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                   obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                  modFlagArr, allQ, allMetrics, loud=loud $
+                  modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable $
  else begin
   Nfreq=obsInfo.Nfreq
   
@@ -784,7 +786,7 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                    freqList_loc, bestQarr_loc, chiArr_loc, rhoArr_loc, etaArr_loc, CCarr_loc, $           
                    ItotalObsArr_loc, ItotalModArr_loc, ImaxObsArr_loc, ImaxModArr_loc, IthrObsArr_loc, IthrModArr_loc, $ 
                    obsImageArr_loc, obsImageSigmaArr_loc, modImageArr_loc, modImageConvArr_loc, $ 
-                   modFlagArr_loc, allQ_loc, allMetrics_loc, loud=loud
+                   modFlagArr_loc, allQ_loc, allMetrics_loc, loud=loud, SHtable=SHtable
                    
    bestQarr[i]=bestQarr_loc
    chiArr[i]=chiArr_loc

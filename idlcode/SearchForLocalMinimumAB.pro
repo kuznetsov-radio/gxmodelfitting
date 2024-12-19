@@ -240,7 +240,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                              Q0start=Q0start, metric=metric, $
                              threshold_img=threshold_img, threshold_metric=threshold_metric, $
                              MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, $
-                             a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, xy_shift=xy_shift, loud=loud
+                             a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, xy_shift=xy_shift, $
+                             loud=loud, SHtable=SHtable
 ;This program searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement 
 ;between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations
 ;comparison metric. 
@@ -353,6 +354,9 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ; loud - if set, the code displays more detailed information when it fails to find a solution (e.g., when the minimization
 ;  procedure goes beyond the EBTEL table).
 ;
+; SHtable - a 7*7 table specifying the selective heating coefficients applied to the field lines with different
+;  footpoint combinations. Default: no selective heating (all elements of the table equal 1).
+;
 ;Results:
 ; The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency
 ; is considered. The program creates in the OutDir directory a .sav file with the name starting with 'Summary' and 
@@ -428,7 +432,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   endfor
  endelse 
 
- model=LoadGXmodel(ModelFileName)
+ model=LoadGXmodel(ModelFileName, /noVoxelID)
  
  ebtel=LoadEBTEL(EBTELfileName, DEM=DEM, DDM=DDM)
  DEM_on=ebtel.DEM_on
@@ -460,6 +464,16 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   xy_shift=0
   fixed_shifts=0
  endelse  
+
+ if exist(SHtable) then begin
+  SHtable=double(SHtable)
+  s=size(SHtable)
+  if (s[0] ne 2) || (s[1] ne 7) || (s[2] ne 7) then begin
+   print, 'Incorrect size of the selective heating table; returning to default.'
+   SHtable=dblarr(7, 7)
+   SHtable[*]=1
+  endif
+ endif
  
  MultiFreq_on=1
 
@@ -482,7 +496,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                 freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                 ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                 obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                modFlagArr, allQ, allMetrics, loud=loud
+                modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable
                  
   SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
                     LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
@@ -521,7 +535,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                   freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                   ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                   obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                  modFlagArr, allQ, allMetrics, loud=loud
+                  modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable
                   
     SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
                       LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
@@ -576,7 +590,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                     freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                     ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                     obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                    modFlagArr, allQ, allMetrics, loud=loud
+                    modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable
       SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
                         LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
                         sxArr, syArr, beamArr, $

@@ -2,7 +2,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  alist, blist, xc, yc, dx, dy, Nx, Ny, $
                  RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, $
                  MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM, $
-                 Qstep=Qstep, xy_shift=xy_shift, loud=loud
+                 Qstep=Qstep, xy_shift=xy_shift, loud=loud, SHtable=SHtable
 ;This program searches for the heating rate value Q0 that provides the best agreement between the model and
 ;observed radio maps, for the specified parameters a and b of the coronal heating model.
 ;
@@ -101,6 +101,9 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ; loud - if set, the code displays more detailed information when it fails to find a solution (e.g., when the minimization
 ;  procedure goes beyond the EBTEL table).
 ;
+; SHtable - a 7*7 table specifying the selective heating coefficients applied to the field lines with different
+;  footpoint combinations. Default: no selective heating (all elements of the table equal 1).
+;
 ;Results:
 ; As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file
 ; with the name starting with 'fit' and including the used metric, threshold, indicator of the multithermal 
@@ -169,7 +172,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   endfor
  endelse
 
- model=LoadGXmodel(ModelFileName)
+ model=LoadGXmodel(ModelFileName, /noVoxelID)
  
  ebtel=LoadEBTEL(EBTELfileName, DEM=DEM, DDM=DDM)
  DEM_on=ebtel.DEM_on
@@ -211,6 +214,16 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   fixed_shifts=0
  endelse
 
+ if exist(SHtable) then begin
+  SHtable=double(SHtable)
+  s=size(SHtable)
+  if (s[0] ne 2) || (s[1] ne 7) || (s[2] ne 7) then begin
+   print, 'Incorrect size of the selective heating table; returning to default.'
+   SHtable=dblarr(7, 7)
+   SHtable[*]=1
+  endif
+ endif
+
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, obsInfo.freq, $
                           rot=(obsInfo.id eq 'RATAN') ? obsInfo.rot[0] : 0d0)       
  
@@ -235,7 +248,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                  ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                  obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                 modFlagArr, allQ, allMetrics, loud=loud
+                 modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable
          
    save, LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
          sxArr, syArr, beamArr, $
