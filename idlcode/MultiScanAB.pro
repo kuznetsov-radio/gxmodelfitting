@@ -2,7 +2,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  alist, blist, xc, yc, dx, dy, Nx, Ny, $
                  RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, $
                  MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM, $
-                 Qstep=Qstep, xy_shift=xy_shift, loud=loud, SHtable=SHtable
+                 Qstep=Qstep, xy_shift=xy_shift, loud=loud, SHtable=SHtable, Nthreads=Nthreads
 ;This program searches for the heating rate value Q0 that provides the best agreement between the model and
 ;observed radio maps, for the specified parameters a and b of the coronal heating model.
 ;
@@ -103,6 +103,10 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;
 ; SHtable - a 7*7 table specifying the selective heating coefficients applied to the field lines with different
 ;  footpoint combinations. Default: no selective heating (all elements of the table equal 1).
+;  
+; Nthreads - number of processor threads used for computing the model microwave images. Cannot exceed
+;            the number of available processors. Default: a system-defined value (typically, the number 
+;            of available processors).
 ;
 ;Results:
 ; As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file
@@ -225,7 +229,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
  endif
 
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, obsInfo.freq, $
-                          rot=(obsInfo.id eq 'RATAN') ? obsInfo.rot[0] : 0d0)       
+                          rot=(obsInfo.id eq 'RATAN') ? obsInfo.rot[0] : 0d0, Nthreads=Nthreads)       
  
  tstart0=systime(1)
  
@@ -248,7 +252,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                  ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                  obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                 modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable
+                 modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads
          
    save, LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
          sxArr, syArr, beamArr, $

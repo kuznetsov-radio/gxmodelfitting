@@ -241,7 +241,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                              threshold_img=threshold_img, threshold_metric=threshold_metric, $
                              MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, $
                              a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, xy_shift=xy_shift, $
-                             loud=loud, SHtable=SHtable
+                             loud=loud, SHtable=SHtable, Nthreads=Nthreads
 ;This program searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement 
 ;between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations
 ;comparison metric. 
@@ -356,6 +356,10 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ;
 ; SHtable - a 7*7 table specifying the selective heating coefficients applied to the field lines with different
 ;  footpoint combinations. Default: no selective heating (all elements of the table equal 1).
+;  
+; Nthreads - number of processor threads used for computing the model microwave images. Cannot exceed
+;            the number of available processors. Default: a system-defined value (typically, the number 
+;            of available processors).
 ;
 ;Results:
 ; The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency
@@ -478,7 +482,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
  MultiFreq_on=1
 
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, ObsInfo.freq, $
-                          rot=(obsInfo.id eq 'RATAN') ? obsInfo.rot[0] : 0d0)   
+                          rot=(obsInfo.id eq 'RATAN') ? obsInfo.rot[0] : 0d0, Nthreads=Nthreads)   
  
  print, 'Searching for a local minimum'
  
@@ -496,7 +500,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                 freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                 ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                 obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable
+                modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads
                  
   SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
                     LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
@@ -535,7 +539,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                   freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                   ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                   obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                  modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable
+                  modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads
                   
     SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
                       LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
@@ -590,7 +594,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                     freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                     ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                     obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                    modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable
+                    modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads
       SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
                         LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
                         sxArr, syArr, beamArr, $

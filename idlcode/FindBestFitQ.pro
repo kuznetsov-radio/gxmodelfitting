@@ -723,7 +723,7 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                   ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ ;output
                   obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ ;output
                   modFlagArr, allQ, allMetrics, $ ;extra output
-                  loud=loud, SHtable=SHtable
+                  loud=loud, SHtable=SHtable, Nthreads=Nthreads
  forward_function MakeSimulationBox
 
  if MultiFreq_on then $
@@ -757,7 +757,7 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
   
   for i=0, Nfreq-1 do begin
    simbox_loc=MakeSimulationBox(simbox.xc, simbox.yc, simbox.dx, simbox.dy, simbox.Nx, simbox.Ny, obsInfo.freq[i], $
-                                rot=RATAN_on ? obsInfo.rot[i] : 0d0) 
+                                rot=RATAN_on ? obsInfo.rot[i] : 0d0, Nthreads=Nthreads) 
    if RATAN_on then begin
     obsImaps_loc=list()
     m=obsImaps[i]
