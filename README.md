@@ -10,7 +10,7 @@ The data (GX Simulator model, etc.) required to run the examples can be found at
 
 Here, we repeat the headers of the above-mentioned routines with the descriptions of the parameters:
 
-pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, alist, blist, xc, yc, dx, dy, Nx, Ny [, RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM, Qstep=Qstep, xy_shift=xy_shift, loud=loud, SHtable=SHtable]
+pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, alist, blist, xc, yc, dx, dy, Nx, Ny [, RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM, Qstep=Qstep, xy_shift=xy_shift, loud=loud, SHtable=SHtable, Nthreads=Nthreads]
 
 Input parameters:<br/>
 RefDir - the directory where the observed radio maps/profiles are stored. If the parameter RefFiles is omitted, the program loads all \*.sav files in the RefDir directory. Otherwise, the program loads the file(s) specified by RefDir+RefFiles.<br/> 
@@ -53,7 +53,8 @@ DEM, DDM - these keywords are only applicable if the chosen EBTELfileName .sav f
 Qstep - the initial relative step over Q0 to search for the optimal heating rate value (must be >1). Default: the golden ratio value (1.6180339).<br/>
 xy_shift - shift applied to the observed microwave maps/profiles, a 2-element vector (for 2D maps) in the form of xy_shift=[dx, dy], or a scalar value (for 1D profiles), in arcseconds. If this parameter is not specified (by default), the shift is computed automatically each time (i.e., for each frequency and a, b, and Q0 values) to provide the maximum correlation between the observed and model images/profiles.<br/>
 loud - if set, the code displays more detailed information when it fails to find a solution (e.g., when the minimization procedure goes beyond the EBTEL table).<br/>
-SHtable - a 7*7 table specifying the selective heating coefficients applied to the field lines with different footpoint combinations. Default: no selective heating (all elements of the table equal 1).
+SHtable - a 7*7 table specifying the selective heating coefficients applied to the field lines with different footpoint combinations. Default: no selective heating (all elements of the table equal 1).<br/>
+Nthreads - number of processor threads used for computing the model microwave images. Cannot exceed the number of available processors. Default: a system-defined value (typically, the number of available processors).
 
 Results:<br/>
 As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file with the name starting with 'fit' and including the used metric, threshold, indicator of the multithermal approach, a and b values, and (optionally) the ObsDateTime string. These .sav files contain the following fields:<br/>
@@ -74,7 +75,7 @@ shiftX, shiftY - 3D arrays (N_a\*N_b\*N_freq) of the shifts (in arcseconds) appl
 rho, chi, eta - 3D arrays (N_a\*N_b\*N_freq) of the obtained rho^2, chi^2, and eta^2 metrics at different values of a, b, and frequency. Note that only one of those metrics (defined by the 'metric' keyword) is actually minimized; two other metrics correspond to the obtained best-fit Q0 values.<br/>
 If the Summary\*.sav file exists, it will be overwritten.
 
-pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileName, OutDir, xc, yc, dx, dy, Nx, Ny, a_start, b_start, da, db [, Q0start=Q0start, metric=metric, threshold_img=threshold_img, threshold_metric=threshold_metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, xy_shift=xy_shift, loud=loud, SHtable=SHtable]
+pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileName, OutDir, xc, yc, dx, dy, Nx, Ny, a_start, b_start, da, db [, Q0start=Q0start, metric=metric, threshold_img=threshold_img, threshold_metric=threshold_metric, MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, xy_shift=xy_shift, loud=loud, SHtable=SHtable, Nthreads=Nthreads]
 
 Input parameters:<br/>
 RefFileName - name of the .sav file that contains the observed radio map/profile (at a single frequency).<br/> 
@@ -119,7 +120,8 @@ noArea - if set, the area of good agreement (within the threshold_metric thresho
 Qstep - the initial relative step over Q0 to search for the optimal heating rate value (must be >1). Default: the golden ratio value (1.6180339).<br/>
 xy_shift - shift applied to the observed microwave map/profile, a 2-element vector in the form of xy_shift=[dx, dy] (for 2D maps), or a scalar value (for 1D profiles), in arcseconds.  If this parameter is not specified (by default), the shift is computed automatically each time (i.e., for each frequency and a, b, and Q0 values) to provide the maximum correlation between the observed and model images/profiles. <br/>
 loud - if set, the code displays more detailed information when it fails to find a solution (e.g., when the minimization procedure goes beyond the EBTEL table).<br/>
-SHtable - a 7*7 table specifying the selective heating coefficients applied to the field lines with different footpoint combinations. Default: no selective heating (all elements of the table equal 1).
+SHtable - a 7*7 table specifying the selective heating coefficients applied to the field lines with different footpoint combinations. Default: no selective heating (all elements of the table equal 1).<br/>
+Nthreads - number of processor threads used for computing the model microwave images. Cannot exceed the number of available processors. Default: a system-defined value (typically, the number of available processors).
 
 Results:<br/>
 The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency is considered. The program creates in the OutDir directory a .sav file with the name starting with 'Summary' and including the used metric, threshold, indicator of the multithermal approach, and (optionally) the ObsDateTime and ObsFreq strings. This .sav file contains the following fields:<br/>
