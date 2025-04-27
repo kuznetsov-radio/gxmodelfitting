@@ -4,7 +4,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
                     ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ ;output
                     obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ ;output
                     modFlagArr, allQ, allMetrics, $ ;extra output
-                    loud=loud, SHtable=SHtable
+                    loud=loud, SHtable=SHtable, analyticalNT=analyticalNT, EMthreshold=EMthreshold
  forward_function GetSmoothedMax, DefineCoronaParms, ReserveOutputSpace, ConvertToMaps
                        
  acc=1d-2 ;desired accuracy
@@ -75,7 +75,7 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
    print, 'Array of Q0: ', Qgrid
    print, 'Computing images for the item #', string(i, format='(I0)')  
    
-   coronaparms=DefineCoronaParams(Tbase, nbase, Qgrid[i], a, b, force_isothermal=iso)
+   coronaparms=DefineCoronaParams(Tbase, nbase, Qgrid[i], a, b, force_isothermal=iso, analyticalNT=analyticalNT)
    outspace=ReserveOutputSpace(simbox)
     
    r=exist(SHtable) ? call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace, SHtable) : $
@@ -239,11 +239,11 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     endif
    endfor
    
-   if (1d0*flags[0, 5]/flags[0, 2]) gt 0.1 then begin
+   if (flags[0, 2] gt 0) && ((double(flags[0, 5])/flags[0, 2]) gt EMthreshold) then begin
     if exist(loud) then print, '*** Out of EBTEL table at left boundary, Q0=', Qgrid[0], ' ***'
     lmins=0
    endif
-   if (1d0*flags[NQ-1, 5]/flags[NQ-1, 2]) gt 0.1 then begin
+   if (flags[NQ-1, 2] gt 0) && ((double(flags[NQ-1, 5])/flags[NQ-1, 2]) gt EMthreshold) then begin
     if exist(loud) then print, '*** Out of EBTEL table at right boundary, Q0=', Qgrid[NQ-1], ' ***'
     rmins=0
    endif
@@ -437,11 +437,11 @@ pro FindBestFitQmf, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo,
     print, 'Image metrics:   ', mtr_a, mtr_b, mtr_c
     print, 'Computing images for Q0=', Qx, st
    
-    coronaparms=DefineCoronaParams(Tbase, nbase, Qx, a, b, force_isothermal=iso)
+    coronaparms=DefineCoronaParams(Tbase, nbase, Qx, a, b, force_isothermal=iso, analyticalNT=analyticalNT)
     outspace=ReserveOutputSpace(simbox)
     
-   r=exist(SHtable) ? call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace, SHtable) : $
-                      call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace)
+    r=exist(SHtable) ? call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace, SHtable) : $
+                       call_external(libname, 'ComputeMW', model, ebtel, simbox, coronaparms, outspace)
                     
     ConvertToMaps, outspace, simbox, model, modImaps, modVmaps, flux=RATAN_on
     if ~RATAN_on then obj_destroy, modVmaps
@@ -723,7 +723,7 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                   ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ ;output
                   obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ ;output
                   modFlagArr, allQ, allMetrics, $ ;extra output
-                  loud=loud, SHtable=SHtable, Nthreads=Nthreads
+                  loud=loud, SHtable=SHtable, Nthreads=Nthreads, analyticalNT=analyticalNT, EMthreshold=EMthreshold
  forward_function MakeSimulationBox
 
  if MultiFreq_on then $
@@ -732,7 +732,8 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                   freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $           
                   ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                   obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                  modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable $
+                  modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, analyticalNT=analyticalNT, $
+                  EMthreshold=EMthreshold $
  else begin
   Nfreq=obsInfo.Nfreq
   
@@ -786,7 +787,8 @@ pro FindBestFitQ, libname, model, ebtel, simbox, obsImaps, obsSImaps, obsInfo, $
                    freqList_loc, bestQarr_loc, chiArr_loc, rhoArr_loc, etaArr_loc, CCarr_loc, $           
                    ItotalObsArr_loc, ItotalModArr_loc, ImaxObsArr_loc, ImaxModArr_loc, IthrObsArr_loc, IthrModArr_loc, $ 
                    obsImageArr_loc, obsImageSigmaArr_loc, modImageArr_loc, modImageConvArr_loc, $ 
-                   modFlagArr_loc, allQ_loc, allMetrics_loc, loud=loud, SHtable=SHtable
+                   modFlagArr_loc, allQ_loc, allMetrics_loc, loud=loud, SHtable=SHtable, analyticalNT=analyticalNT, $
+                   EMthreshold=EMthreshold
                    
    bestQarr[i]=bestQarr_loc
    chiArr[i]=chiArr_loc

@@ -93,7 +93,8 @@ pro ExpandArrays1, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da
  endif
 end
 
-pro ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric, a_range, b_range
+pro ExpandArrays2, mtr_arr, Q0_arr, a_arr, b_arr, a_arr1D, b_arr1D, N_a, N_b, da, db, threshold_metric, $
+                   a_range, b_range
  FindMinMetricLocation, mtr_arr, k
  mtr_min=mtr_arr[k]
  u=where(finite(mtr_arr) and (mtr_arr gt 0) and (mtr_arr lt (mtr_min*threshold_metric)))
@@ -241,7 +242,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                              threshold_img=threshold_img, threshold_metric=threshold_metric, $
                              MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, $
                              a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, xy_shift=xy_shift, $
-                             loud=loud, SHtable=SHtable, Nthreads=Nthreads
+                             loud=loud, SHtable=SHtable, Nthreads=Nthreads, analyticalNT=analyticalNT, $
+                             EMthreshold=EMthreshold
 ;This program searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement 
 ;between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations
 ;comparison metric. 
@@ -360,6 +362,19 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ; Nthreads - number of processor threads used for computing the model microwave images. Cannot exceed
 ;            the number of available processors. Default: a system-defined value (typically, the number 
 ;            of available processors).
+;            
+; analyticalNT - defines how the code computes the emission if the parameters of a closed field line (Q, L) 
+;                fall beyond the used EBTEL table. If not set (by default): the isothermal barometric formula
+;                with the base density of 1e8 cm^{-3} and the temperature of 1 MK is used. If set:
+;                the plasma density and temperature are computed using approximate analytical formulae
+;                for continuosly heated coronal loops. Note that for the open magnetic lines, the isothermal
+;                barometric formula is always used.
+;                
+; EMthreshold - the maximum allowed EBTEL miss ratio. The EBTEL miss ratio is computed as the ratio of the 
+;               number of the closed field lines where the parameter Q falls beyond the used EBTEL table
+;               (is too large or too small) to the total number of closed field lines. If the EBTEL miss ratio
+;               exceeds the threshold, the corresponding (Q0, a, b) combination is considered falling beyond
+;               an acceptable range. Default: 0.1. The threshold is not applicable if there are no closed field lines.
 ;
 ;Results:
 ; The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency
@@ -479,6 +494,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   endif
  endif
  
+ if ~exist(EMthreshold) then EMthreshold=0.1
+ 
  MultiFreq_on=1
 
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, ObsInfo.freq, $
@@ -500,12 +517,14 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                 freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                 ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                 obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads
+                modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads, $
+                analyticalNT=analyticalNT, EMthreshold=EMthreshold
                  
   SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
                     LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
                     sxArr, syArr, beamArr, $
-                    a_start, b_start, Qstart, Qstep, iso, threshold_img, threshold_metric, metric, MultiFreq_on, fixed_shifts, $
+                    a_start, b_start, Qstart, Qstep, iso, threshold_img, threshold_metric, metric, $
+                    MultiFreq_on, fixed_shifts, $
                     freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $ 
                     ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                     obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
@@ -539,7 +558,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                   freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                   ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                   obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                  modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads
+                  modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads, $
+                  analyticalNT=analyticalNT, EMthreshold=EMthreshold
                   
     SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
                       LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
@@ -594,7 +614,8 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                     freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                     ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                     obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                    modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads
+                    modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads, $
+                    analyticalNT=analyticalNT, EMthreshold=EMthreshold
       SaveLocalResults, OutDir, ObsDateTime1, ObsFreq1, $
                         LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
                         sxArr, syArr, beamArr, $

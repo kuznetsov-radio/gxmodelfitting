@@ -2,7 +2,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  alist, blist, xc, yc, dx, dy, Nx, Ny, $
                  RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, $
                  MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM, $
-                 Qstep=Qstep, xy_shift=xy_shift, loud=loud, SHtable=SHtable, Nthreads=Nthreads
+                 Qstep=Qstep, xy_shift=xy_shift, loud=loud, SHtable=SHtable, Nthreads=Nthreads, $
+                 analyticalNT=analyticalNT, EMthreshold=EMthreshold
 ;This program searches for the heating rate value Q0 that provides the best agreement between the model and
 ;observed radio maps, for the specified parameters a and b of the coronal heating model.
 ;
@@ -107,6 +108,20 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ; Nthreads - number of processor threads used for computing the model microwave images. Cannot exceed
 ;            the number of available processors. Default: a system-defined value (typically, the number 
 ;            of available processors).
+;            
+; analyticalNT - defines how the code computes the emission if the parameters of a closed field line (Q, L) 
+;                fall beyond the used EBTEL table. If not set (by default): the isothermal barometric formula
+;                with the base density of 1e8 cm^{-3} and the temperature of 1 MK is used. If set:
+;                the plasma density and temperature are computed using approximate analytical formulae
+;                for continuosly heated coronal loops. Note that for the open magnetic lines, the isothermal
+;                barometric formula is always used.
+;                
+; EMthreshold - the maximum allowed EBTEL miss ratio. The EBTEL miss ratio is computed as the ratio of the 
+;               number of the closed field lines where the parameter Q falls beyond the used EBTEL table
+;               (is too large or too small) to the total number of closed field lines. If the EBTEL miss ratio
+;               exceeds the threshold, the corresponding (Q0, a, b) combination is considered falling beyond
+;               an acceptable range. Default: 0.1. The threshold is not applicable if there are no closed field 
+;               lines.
 ;
 ;Results:
 ; As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file
@@ -227,6 +242,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
    SHtable[*]=1
   endif
  endif
+ 
+ if ~exist(EMthreshold) then EMthreshold=0.1
 
  simbox=MakeSimulationBox(xc, yc, dx, dy, Nx, Ny, obsInfo.freq, $
                           rot=(obsInfo.id eq 'RATAN') ? obsInfo.rot[0] : 0d0, Nthreads=Nthreads)       
@@ -252,7 +269,8 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  freqList, bestQarr, chiArr, rhoArr, etaArr, CCarr, $        
                  ItotalObsArr, ItotalModArr, ImaxObsArr, ImaxModArr, IthrObsArr, IthrModArr, $ 
                  obsImageArr, obsImageSigmaArr, modImageArr, modImageConvArr, $ 
-                 modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads
+                 modFlagArr, allQ, allMetrics, loud=loud, SHtable=SHtable, Nthreads=Nthreads, $
+                 analyticalNT=analyticalNT, EMthreshold=EMthreshold
          
    save, LibFileName, modelFileName, EBTELfileName, DEM_on, DDM_on, $
          sxArr, syArr, beamArr, $
