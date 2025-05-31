@@ -3,7 +3,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
                  RefFiles=RefFiles, Q0start=Q0start, threshold=threshold, metric=metric, $
                  MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, noMultiFreq=noMultiFreq, DEM=DEM, DDM=DDM, $
                  Qstep=Qstep, xy_shift=xy_shift, loud=loud, SHtable=SHtable, Nthreads=Nthreads, $
-                 analyticalNT=analyticalNT, EMthreshold=EMthreshold
+                 analyticalNT=analyticalNT, EMthreshold=EMthreshold, newTime=newTime
 ;This program searches for the heating rate value Q0 that provides the best agreement between the model and
 ;observed radio maps, for the specified parameters a and b of the coronal heating model.
 ;
@@ -122,6 +122,11 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
 ;               exceeds the threshold, the corresponding (Q0, a, b) combination is considered falling beyond
 ;               an acceptable range. Default: 0.1. The threshold is not applicable if there are no closed field 
 ;               lines.
+;        
+; newTime - date and time in a format accepted by the anytim() function. If specified, the model of the active
+;           region is rotated to the new date/time (i.e., the heliographic longitude is changed). Note that the
+;           model is rotated as a whole, by the angle determined by the differential rotation rate at the model's
+;           center.
 ;
 ;Results:
 ; As the result, for each (a, b) combination the program creates in the OutDir directory a .sav file
@@ -191,7 +196,7 @@ pro MultiScanAB, RefDir, ModelFileName, EBTELfileName, LibFileName, OutDir, $
   endfor
  endelse
 
- model=LoadGXmodel(ModelFileName, /noVoxelID)
+ model=LoadGXmodel(ModelFileName, /noVoxelID, newTime=newTime)
  
  ebtel=LoadEBTEL(EBTELfileName, DEM=DEM, DDM=DDM)
  DEM_on=ebtel.DEM_on

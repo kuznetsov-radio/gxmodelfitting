@@ -243,7 +243,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
                              MultiThermal=MultiThermal, ObsDateTime=ObsDateTime, ObsFreq=ObsFreq, DEM=DEM, DDM=DDM, $
                              a_range=a_range, b_range=b_range, noArea=noArea, Qstep=Qstep, xy_shift=xy_shift, $
                              loud=loud, SHtable=SHtable, Nthreads=Nthreads, analyticalNT=analyticalNT, $
-                             EMthreshold=EMthreshold
+                             EMthreshold=EMthreshold, newTime=newTime
 ;This program searches for the parameters of the coronal heating model (a, b, Q0) that provide the best agreement 
 ;between the model and observed radio maps. The search provides a local minimum of the selected model-to-observations
 ;comparison metric. 
@@ -376,6 +376,11 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
 ;               exceeds the threshold, the corresponding (Q0, a, b) combination is considered falling beyond
 ;               an acceptable range. Default: 0.1. The threshold is not applicable if there are no closed field lines.
 ;
+; newTime - date and time in a format accepted by the anytim() function. If specified, the model of the active
+;           region is rotated to the new date/time (i.e., the heliographic longitude is changed). Note that the
+;           model is rotated as a whole, by the angle determined by the differential rotation rate at the model's
+;           center.
+;
 ;Results:
 ; The output of the program is similar to that of the MultiScanAB.pro, with the difference that only one frequency
 ; is considered. The program creates in the OutDir directory a .sav file with the name starting with 'Summary' and 
@@ -451,7 +456,7 @@ pro SearchForLocalMinimumAB, RefFileName, ModelFileName, EBTELfileName, LibFileN
   endfor
  endelse 
 
- model=LoadGXmodel(ModelFileName, /noVoxelID)
+ model=LoadGXmodel(ModelFileName, /noVoxelID, newTime=newTime)
  
  ebtel=LoadEBTEL(EBTELfileName, DEM=DEM, DDM=DDM)
  DEM_on=ebtel.DEM_on
