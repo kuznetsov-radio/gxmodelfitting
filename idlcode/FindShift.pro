@@ -4,7 +4,7 @@ function correlateMaps, map1, map2
  return, total((map1.data-m1)*(map2.data-m2))/sqrt(total((map1.data-m1)^2))/sqrt(total((map2.data-m2)^2))
 end
 
-pro FindShift, obsmap, modmap, dx, dy
+pro FindShift, obsmap, modmap, dx, dy, err=err
  n=301
  d_dx=1d0
  d_dy=1d0
@@ -23,7 +23,7 @@ pro FindShift, obsmap, modmap, dx, dy
  
  done=0
  
- while ~done do begin
+ while (~done) && (i gt 0) && (j gt 0) && (i lt (n-1)) && (j lt (n-1)) do begin
   for ii=-1, 1 do for jj=-1, 1 do if ~finite(sarr[i+ii, j+jj]) then begin
    ExtractSubmap, obsmap, modmap, d_dx*iarr[i+ii], d_dy*jarr[j+jj], '*', newmap
    sarr[i+ii, j+jj]=correlateMaps(modmap, newmap)
@@ -41,6 +41,8 @@ pro FindShift, obsmap, modmap, dx, dy
    j=j+jj0
   endelse
  endwhile
+ 
+ if ~done then err=1 else err=0
  
  dx=d_dx*iarr[i]
  dy=d_dy*jarr[j]
